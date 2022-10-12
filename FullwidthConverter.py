@@ -1,14 +1,15 @@
 import argparse
 import os
+import sys
 import traceback
 from argparse import RawTextHelpFormatter
 
-VER = 'v1.0'
+VER = 'v1.0.1'
 
 DESCRIPTION = '全角片假名转换器\n' + \
-              '本程序可以将半角片假名/符号转换为全角形式\n\n' + \
-              '使用方法：将待转换文件拖放到本程序上即可，也可以使用命令行运行进行更多配置。\n' + \
-              '—— ' + VER + ' by 谢耳朵w\n' + \
+              '本程序可以将半角片假名/符号转换为全角形式\n' + \
+              '—— ' + VER + ' by 谢耳朵w\n\n' + \
+              '使用方法：将待转换文件拖放到本程序上即可，也可以使用命令行运行进行更多配置。\n\n' + \
               '最新版本请前往 https://github.com/barryZZJ/SubtitleCleaner 获取'
 
 lookup = {
@@ -32,10 +33,19 @@ lookup = {
     'ﾜ': 'ワ', 'ﾝ': 'ン', 'ｦ': 'ヲ',
 }
 
+class MyParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_help()
+        print()
+        args = {'prog': self.prog, 'message': message}
+        sys.stderr.write(('%(prog)s: error: %(message)s\n') % args)
+        os.system('pause')
+        self.exit(2)
+
 def initparser():
-    parser = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
+    parser = MyParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
     parser.add_argument('InputFile', type=str, help='待转换文本文件的路径，仅支持utf-8、GBK编码。')
-    parser.add_argument('-o', '--output', metavar='FILE', type=str, help='输出文件名，默认为<输入文件名>_out.txt。')
+    parser.add_argument('-o', '--output', metavar='OUTFILE', type=str, help='输出文件名，默认为<输入文件名>_out.txt。')
     return parser
 
 def mkOutfilename(infile: str):

@@ -1,4 +1,3 @@
-import argparse
 import os
 from argparse import RawTextHelpFormatter
 import re
@@ -6,14 +5,14 @@ import traceback
 import ass
 from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
-from FullwidthConverter import convertline, lookup
+from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v1.0'
+VER = 'v1.0.1'
 
 DESCRIPTION = '字幕清理器\n' + \
-              '把.ass文件中的对话部分提取出来，并进行半角片假名转换、多余符号清洗等各种操作\n\n' + \
-              '使用方法：将待转换文件拖放到本程序上即可，也可以使用命令行运行进行更多配置。\n' + \
-              '—— ' + VER + ' by 谢耳朵w\n' + \
+              '把.ass文件中的对话部分提取出来，并进行半角片假名转换、多余符号清洗等各种操作\n' + \
+              '—— ' + VER + ' by 谢耳朵w\n\n' + \
+              '使用方法：将待转换文件拖放到本程序上即可，也可以使用命令行运行进行更多配置。\n\n' + \
               '详细介绍及最新版本请前往 https://github.com/barryZZJ/SubtitleCleaner 获取'
 
 pats = [
@@ -42,9 +41,9 @@ pats_final = [
 ]  # type: list[tuple[re.Pattern, str]]
 
 def initparser():
-    parser = argparse.ArgumentParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
+    parser = MyParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
     parser.add_argument('InputFile', type=str, help='待转换ass文件的路径。')
-    parser.add_argument('-o', '--output', metavar='FILE', type=str, help='输出文件名，默认为<输入文件名>_out.txt。')
+    parser.add_argument('-o', '--output', metavar='OUTFILE', type=str, help='输出文件名，默认为<输入文件名>_out.txt。')
     return parser
 
 def mkOutfilename(infile: str):
