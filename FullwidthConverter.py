@@ -4,13 +4,13 @@ import sys
 import traceback
 from argparse import RawTextHelpFormatter
 
-VER = 'v1.0.1'
+VER = 'v1.0.2'
 
 DESCRIPTION = '全角片假名转换器\n' + \
-              '本程序可以将半角片假名/符号转换为全角形式\n' + \
+              '本程序可以将半角片假名及｡ ｢ ｣ ､ ･等符号转换为全角形式\n' + \
               '—— ' + VER + ' by 谢耳朵w\n\n' + \
               '使用方法：将待转换文件拖放到本程序上即可，也可以使用命令行运行进行更多配置。\n\n' + \
-              '最新版本请前往 https://github.com/barryZZJ/SubtitleCleaner 获取'
+              '详细介绍、获取最新版本、提交建议和bug请前往 https://github.com/barryZZJ/SubtitleCleaner'
 
 lookup = {
     '｡': '。', '｢': '「', '｣': '」', '､': '、', '･': '・',
@@ -32,6 +32,12 @@ lookup = {
     'ﾗ': 'ラ', 'ﾘ': 'リ', 'ﾙ': 'ル', 'ﾚ': 'レ', 'ﾛ': 'ロ',
     'ﾜ': 'ワ', 'ﾝ': 'ン', 'ｦ': 'ヲ',
 }
+oldprint = print
+logfile = None
+def print(*args, **kwargs):
+    oldprint(*args, **kwargs)
+    if logfile:
+        oldprint(*args, **kwargs, file=logfile)
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -46,11 +52,13 @@ def initparser():
     parser = MyParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
     parser.add_argument('InputFile', type=str, help='待转换文本文件的路径，仅支持utf-8、GBK编码。')
     parser.add_argument('-o', '--output', metavar='OUTFILE', type=str, help='输出文件名，默认为<输入文件名>_out.txt。')
+    parser.add_argument('-q', '--quit', action='store_true', help='结束后不暂停程序直接退出，方便命令行调用。不加该参数程序结束时会暂停。')
+    parser.add_argument('--log', action='store_true', help='记录日志，执行结果输出到<输入文件名>_log.txt')
     return parser
 
-def mkOutfilename(infile: str):
+def mkOutfilename(infile: str, namesuf='_out'):
     name, suf = os.path.splitext(infile)
-    return name+'_out'+suf
+    return name+namesuf+suf
 
 def convertline(line: str, lookup: dict):
     # 日字的数字、全角空格、全角标点符号不能改，可能还是改回查找表，并且额外增加浊音半浊音
@@ -93,18 +101,32 @@ def doconvert(inname, outname, lookup):
     return False
 
 def main():
+    global logfile
     parser = initparser()
     args = parser.parse_args()
-    print(DESCRIPTION)
-    print()
-    print('正在读取', args.InputFile)
+    if args.log:
+        logfile = open(mkOutfilename(args.InputFile, '_log'), 'w', encoding='utf-8')
+    try:
+        print(DESCRIPTION)
+        print()
+        print('正在读取', args.InputFile)
 
-    outname = args.output or mkOutfilename(args.InputFile)
-    doconvert(args.InputFile, outname, lookup)
+        outname = args.output or mkOutfilename(args.InputFile)
+        doconvert(args.InputFile, outname, lookup)
 
-    print()
-    os.system('pause')
-    #input('\nPress return to continue...')
+        print()
+    except Exception as err:
+        print(
+            '\n发生了未知错误！请将下面的报错信息及待转换文件提交到 https://github.com/barryZZJ/SubtitleCleaner/issues')
+        traceback.print_exc()
+    finally:
+        if logfile:
+            logfile.close()
+            oldprint('日志文件已保存至', mkOutfilename(args.InputFile, '_log'))
+            oldprint()
+
+        if not args.quit:
+            os.system('pause')
 
 if __name__ == '__main__':
     main()
