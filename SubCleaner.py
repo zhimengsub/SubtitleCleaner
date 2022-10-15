@@ -7,7 +7,7 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.1.0'
+VER = 'v2.2.0'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
@@ -124,26 +124,25 @@ def removeSFX(line:str):
 def doclean(inname, outname, pats, lookup):
     encoding = 'utf-8-sig'
     outfile = None
-    warnings_mergeclean = []
-    warnings_convert = []
+    warnings = []
     try:
         with open(inname, encoding=encoding) as f:
             doc = ass.parse(f)
         outfile = open(outname, 'w', encoding='utf-8')
 
-        # 台词合并与清理
-        cnter = 0
+        cnter_mg = 0
+        cnter_cv = 0
         procid = 1  # number of processed lines
         i = 0
-        mergedCleanLines = []
-        print('合并与清理台词中...\n')
+        print('开始处理字幕...\n')
         while i < len(doc.events):
             if doc.events[i].TYPE != 'Dialogue':
                 i += 1
                 continue
             oline = removeSFX(doc.events[i].text)
             nline = cleanline(removeSFX(doc.events[i].text), pats)
-            # find events that should merge together
+
+            # merge and clean lines
             j = i
             reason = ''
             res = -1
@@ -180,57 +179,47 @@ def doclean(inname, outname, pats, lookup):
                     mergeLeftSymbol = ''
                 else:
                     raise NotImplementedError('Merge result not implemented!')
-
-            # merge done
             # 再次清理一遍，因为有可能合并过后产生新的成对括号等符合清理条件的内容
             nline = cleanline(nline, pats)
             if j != i:
+                # print msg if merged
                 # j为最后一条发生merge的行数
                 # did merge
                 if res == 1:
                     warn = f"WARNING: 未找到配对的'{pairs[mergeLeftSymbol]}'，请手动修改ass文件使左右标志符号个数一致！"
                     print(warn)
-                    warnings_mergeclean.append((procid, warn))
-                cnter += j - i + 1
+                    warnings.append((procid, warn))
+                cnter_mg += j - i + 1
                 print(reason)
+            # merge done
 
-            if nline == '':
+            # convert half-width katakana and symbols
+            nline_cv = convertline(nline, lookup)
+            if nline_cv != nline:
+                reason = '[转换假名]'
+                print(reason)
+                cnter_cv += 1
+            # convert done
+
+            if nline_cv == '':
                 print(str(procid)+'.', oline, '-> <删除该行>')
             else:
-                print(str(procid)+'.', oline, '->\n\t', nline)
-                nline = cleanline(nline, pats_final)
-                mergedCleanLines.append(nline)
+                print(str(procid)+'.', oline, '->\n\t', nline_cv)
+                # add \N at start
+                nline_cv = cleanline(nline_cv, pats_final)
             print()
             procid += 1
             i = j + 1
 
-        print('合并与清理阶段完成！共合并了', cnter, '行对白，共生成了', procid, '行对白。')
-        # todo 把转换假名合并到上面的步骤，分开统计信息
-        # process line by line
-        print('\n' + '=' * 50 + '\n\n转换半角假名中...')
-        cnter = 0
-        procid = 0
-        for line in mergedCleanLines:
-            # convert half-width katakana and symbols
-            nline = convertline(line, lookup)
-            if nline != line:
-                procid += 1
-                cnter += 1
-                print(str(procid)+'.', line, '->\n\t', nline)
-                print()
-            outfile.write(nline)
+            outfile.write(nline_cv)
             outfile.write('\n')
-        print('假名转换阶段完成! 共处理了', cnter, '行对白')
+
+        print('处理完成！共合并了', cnter_mg, '行对白，假名转换了', cnter_cv, '行对白，最终生成了', procid, '行对白。')
         print('\n已保存至', outname)
 
-        if len(warnings_mergeclean):
-            print('\n合并与清理阶段存在WARNING，请根据下方信息向上查找对应记录')
-            for procid, msg in warnings_mergeclean:
-                print('\t第' + str(procid) + '条:', msg)
-
-        if len(warnings_convert):
-            print('\n假名转换阶段存在WARNING，请根据下方信息向上查找对应记录')
-            for procid, msg in warnings_convert:
+        if len(warnings):
+            print('\n存在WARNING，请根据下方信息向上查找对应记录')
+            for procid, msg in warnings:
                 print('\t第' + str(procid) + '条:', msg)
 
         return True
