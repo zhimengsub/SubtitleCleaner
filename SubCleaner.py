@@ -7,7 +7,7 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.2.0'
+VER = 'v2.3.0'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
@@ -24,6 +24,10 @@ pairs = {
     '「': '」',
     '｢': '｣',
 }
+
+single_end = [
+    '→'
+]
 
 pats = [
     # remove …
@@ -50,6 +54,8 @@ pats = [
     (re.compile(r'~'), ''),
     (re.compile(r'～'), ''),
     (re.compile(r'∼'), ''),
+    # remove '→'
+    (re.compile(r'→'), ''),
     # 顿号、改为半角空格
     (re.compile(r'、'), ' '),
     (re.compile(r'､'), ' '),
@@ -86,25 +92,39 @@ def mkOutfilename(infile: str, namesuf=''):
     return name+namesuf+'.txt'
 
 def shouldMerge(event1:Dialogue, event2:Dialogue, mergeLSymb='') -> tuple[int, str]:
-
+    '''
+    return:
+        res:int >=0, 需要合并； <0, 不合并
+        symbol:str
+            当res in [1, 2]时，为mergeLSymb: 匹配到的成对标识符的开头
+            当res in [-2, 3]时，为singleSymb: 匹配到的单个标识符
+    '''
     if not mergeLSymb:
-        # 先找有没有标识符
+        # 先找有没有成对标识符
         # look for left symbol
         for l, r in pairs.items():
             if l in event1.text and r not in event1.text:
                 mergeLSymb = l
                 break
     if mergeLSymb:
-        # 有标识符就只匹配标识符，不匹配时间
+        # 有成对标识符就只匹配标识符
         # look for right symbol
         if mergeLSymb in event1.text and pairs[mergeLSymb] not in event1.text:
             if pairs[mergeLSymb] in event2.text:
                 return 2, mergeLSymb  # 拼接结束
             else:
                 return 1, mergeLSymb  # 继续拼接
-    # 没找到标识符，则匹配时间
-    if event1.start == event2.start and event1.end == event2.end:
-        return 0, ''
+
+    # 找单个标识符
+    for symb in single_end:
+        if event1.text.endswith(symb+r'\N'):
+            return 3, symb
+        elif symb in event1.text:
+            return -2, symb
+
+    # # 没找到标识符，则匹配时间
+    # if event1.start == event2.start and event1.end == event2.end:
+    #     return 0, ''
 
     # 都不符合，不merge
     return -1, ''
@@ -132,66 +152,89 @@ def doclean(inname, outname, pats, lookup):
 
         cnter_mg = 0
         cnter_cv = 0
-        procid = 1  # number of processed lines
+        procid = 0  # number of processed lines
         i = 0
         print('开始处理字幕...\n')
         while i < len(doc.events):
-            if doc.events[i].TYPE != 'Dialogue':
+            if doc.events[i].TYPE != 'Dialogue' or doc.events[i].style.lower() == 'rubi':
+                if doc.events[i].style.lower() == 'rubi':
+                    print('[跳过Rubi台词]')
+                    print(removeSFX(doc.events[i].text))
+                    print()
                 i += 1
                 continue
+            procid += 1
             oline = removeSFX(doc.events[i].text)
             nline = cleanline(removeSFX(doc.events[i].text), pats)
 
             # merge and clean lines
             j = i
             reason = ''
-            res = -1
-            mergeLeftSymbol = ''  # 已匹配到的合并标志开头符号
+            ret = (-10, '')
+            mergeLeftSymb = ''  # 已匹配到的合并标志对左符号
             eventL = doc.events[i]
-            while j+1 < len(doc.events) and (ret:=shouldMerge(eventL, doc.events[j+1], mergeLeftSymbol))[0] >= 0:
-                res, mergeLeftSymbol = ret
+            while j+1 < len(doc.events) and (ret:=shouldMerge(eventL, doc.events[j+1], mergeLeftSymb))[0] >= 0:
+                res, symbol = ret
                 j += 1
                 oline += ' + ' + removeSFX(doc.events[j].text)
                 nextline = cleanline(removeSFX(doc.events[j].text), pats)
                 if not nextline: continue
-                nline = nline + '　' + nextline
+                sep = '　'  # 全角空格
                 if res == 1:
-                    # 继续拼接
+                    # 匹配到符号对，且继续拼接
+                    mergeLeftSymb = symbol
                     if not reason:
-                        reason = f"[合并](以'{mergeLeftSymbol}'开头)(尚未发现'{pairs[mergeLeftSymbol]}')"
+                        reason = f"[合并](以'{mergeLeftSymb}'开头)(尚未发现'{pairs[mergeLeftSymb]}')"
                     else:
-                        reason += f"(尚未发现'{pairs[mergeLeftSymbol]}')"
+                        reason += f"(尚未发现'{pairs[mergeLeftSymb]}')"
                 elif res == 2:
-                    # 拼接结束
+                    # 匹配到符号对，且拼接结束
+                    mergeLeftSymb = symbol
                     if not reason:
-                        reason = f"[合并]('{mergeLeftSymbol}'开头)(以'{pairs[mergeLeftSymbol]}'结尾)"
+                        reason = f"[合并](以'{mergeLeftSymb}'开头)(以'{pairs[mergeLeftSymb]}'结尾)"
                     else:
-                        reason += f"(以'{pairs[mergeLeftSymbol]}'结尾)"
+                        reason += f"(以'{pairs[mergeLeftSymb]}'结尾)"
                     # 考虑到存在下一行时间仍相同，或者出现新的标识符的情况，故继续搜索
                     eventL = doc.events[j]
-                    mergeLeftSymbol = ''
-                elif res == 0:
-                    # same time, merge with half-width space
+                    mergeLeftSymb = ''
+                elif res == 3:
+                    # 匹配到单个符号结尾
+                    singleSymb = symbol
                     if not reason:
-                        reason = '[合并](时间相同)(时间相同)'
+                        reason = f"[合并](以'{singleSymb}'结尾)"
                     else:
-                        reason += '(时间相同)'
-                    mergeLeftSymbol = ''
+                        reason += f"(以'{singleSymb}'结尾)"
+                    eventL = doc.events[j]
+                    mergeLeftSymb = ''
+                # elif res == 0:
+                #     # same time, merge with half-width space
+                #     if not reason:
+                #         reason = '[合并](时间相同)(时间相同)'
+                #     else:
+                #         reason += '(时间相同)'
+                #     mergeLeftSymb = ''
+                #     sep = ' '
                 else:
                     raise NotImplementedError('Merge result not implemented!')
-            # 再次清理一遍，因为有可能合并过后产生新的成对括号等符合清理条件的内容
-            nline = cleanline(nline, pats)
+                nline = nline + sep + nextline
+            # merge done
+            res, symbol = ret
             if j != i:
-                # print msg if merged
+                # did merge, print msg
+                # 再次清理一遍，因为有可能合并过后产生新的成对括号等符合清理条件的内容
+                nline = cleanline(nline, pats)
                 # j为最后一条发生merge的行数
-                # did merge
                 if res == 1:
-                    warn = f"WARNING: 未找到配对的'{pairs[mergeLeftSymbol]}'，请手动修改ass文件使左右标志符号个数一致！"
+                    warn = f"WARNING: 未找到配对的'{pairs[symbol]}'，请手动修改ass文件使左右标志符号个数一致！"
                     print(warn)
                     warnings.append((procid, warn))
                 cnter_mg += j - i + 1
                 print(reason)
-            # merge done
+            if res == -2:
+                # 匹配单个符号，但不在句尾
+                warn = f"WARNING: 找到符号'{symbol}'，但不在句尾，如需合并请手动修改！"
+                print(warn)
+                warnings.append((procid, warn))
 
             # convert half-width katakana and symbols
             nline_cv = convertline(nline, lookup)
@@ -207,12 +250,11 @@ def doclean(inname, outname, pats, lookup):
                 print(str(procid)+'.', oline, '->\n\t', nline_cv)
                 # add \N at start
                 nline_cv = cleanline(nline_cv, pats_final)
-            print()
-            procid += 1
-            i = j + 1
+                outfile.write(nline_cv)
+                outfile.write('\n')
 
-            outfile.write(nline_cv)
-            outfile.write('\n')
+            print()
+            i = j + 1
 
         print('处理完成！共合并了', cnter_mg, '行对白，假名转换了', cnter_cv, '行对白，最终生成了', procid, '行对白。')
         print('\n已保存至', outname)
