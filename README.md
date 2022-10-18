@@ -1,6 +1,6 @@
 # 程序下载
 
-在[Releases](https://github.com/barryZZJ/SubtitleCleaner/releases)页面选择最新版本的程序下载。
+在[Releases](https://github.com/zhimengsub/SubtitleCleaner/releases)页面选择最新版本的程序下载。
 
 # FullwidthConverter / 全角片假名转换器
 
@@ -66,7 +66,7 @@ by 谢耳朵w v1.0
 
 # 提出修改建议 / 运行时的错误和BUG
 
-请给我提出[Issue](https://github.com/barryZZJ/SubtitleCleaner/issues)，看到后我会及时处理。
+请给我提出[Issue](https://github.com/zhimengsub/SubtitleCleaner/issues)，看到后我会及时处理。
 
 # Changelog
 
@@ -84,6 +84,9 @@ by 谢耳朵w v1.0
   - 一次只支持单个文件
 
 ## SubCleaner
+
+- v2.3.1
+  - 转移仓库至zhimengsub
 
 - v2.3.0
   - 改进台词合并的规则

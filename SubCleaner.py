@@ -7,13 +7,13 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.3.0'
+VER = 'v2.3.1'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
               '—— ' + VER + ' by 谢耳朵w\n\n' + \
               '使用方法：将待转换文件拖放到本程序上即可，也可以使用命令行运行进行更多配置。\n\n' + \
-              '详细介绍、获取最新版本、提交建议和bug请前往 https://github.com/barryZZJ/SubtitleCleaner'
+              '详细介绍、获取最新版本、提交建议和bug请前往 https://github.com/zhimengsub/SubtitleCleaner'
 
 # 标志台词需要合并的符号对
 pairs = {
@@ -267,7 +267,7 @@ def doclean(inname, outname, pats, lookup):
         return True
     except Exception as err:
         print(
-            '\n发生了未知错误！请将下面的报错信息及待转换文件提交到 https://github.com/barryZZJ/SubtitleCleaner/issues')
+            '\n发生了未知错误！请将下面的报错信息及待转换文件提交到 https://github.com/zhimengsub/SubtitleCleaner/issues')
         traceback.print_exc()
         return False
     finally:
@@ -289,7 +289,7 @@ def main():
         print()
     except Exception as err:
         print(
-            '\n发生了未知错误！请将下面的报错信息及待转换文件提交到 https://github.com/barryZZJ/SubtitleCleaner/issues')
+            '\n发生了未知错误！请将下面的报错信息及待转换文件提交到 https://github.com/zhimengsub/SubtitleCleaner/issues')
         traceback.print_exc()
     finally:
         if logfile:
