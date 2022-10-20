@@ -7,13 +7,17 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.3.1'
+VER = 'v2.4.0'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
               '—— ' + VER + ' by 谢耳朵w\n\n' + \
               '使用方法：将待转换文件拖放到本程序上即可，也可以使用命令行运行进行更多配置。\n\n' + \
               '详细介绍、获取最新版本、提交建议和bug请前往 https://github.com/zhimengsub/SubtitleCleaner'
+
+# 合并相关
+MERGE_EVERY = 2  # 每两行合并一次
+MERGE_SEP = '\n'  # 合并时使用的分隔符，用于最终处理MERGE_EVERY
 
 # 标志台词需要合并的符号对
 pairs = {
@@ -29,47 +33,48 @@ single_end = [
     '→'
 ]
 
+# 清理相关
 pats = [
-    # remove …
-    (re.compile(r'…'), ''),
-    # remove 。(full width)
-    (re.compile(r'。'), ''),
-    # remove ｡
-    (re.compile(r'｡'), ''),
-    # remove ！
-    (re.compile(r'！'), ''),
-    # remove 《
-    (re.compile(r'《'), ''),
-    # remove 》
-    (re.compile(r'》'), ''),
-    # remove <
-    (re.compile(r'<'), ''),
-    (re.compile(r'＜'), ''),
-    (re.compile(r'〈'), ''),
-    # remove >
-    (re.compile(r'>'), ''),
-    (re.compile(r'＞'), ''),
-    (re.compile(r'〉'), ''),
-    # remove ~
-    (re.compile(r'~'), ''),
-    (re.compile(r'～'), ''),
-    (re.compile(r'∼'), ''),
-    # remove '→'
-    (re.compile(r'→'), ''),
+    # remove symbols
+    (re.compile(r'\\N'), ''),
+    (re.compile(r'《'), ''), (re.compile(r'》'), ''),
+    (re.compile(r'<'), ''), (re.compile(r'＜'), ''), (re.compile(r'〈'), ''),
+    (re.compile(r'>'), ''), (re.compile(r'＞'), ''), (re.compile(r'〉'), ''),
+    (re.compile(r'→'), ''), (re.compile(r'…'), ''), (re.compile(r'。'), ''), (re.compile(r'｡'), ''),
+    (re.compile(r'！'), ''), (re.compile(r'!'), ''), (re.compile(r'？'), ''), (re.compile(r'\?'), ''),
+    (re.compile(r'~'), ''), (re.compile(r'～'), ''), (re.compile(r'∼'), ''), (re.compile(r'・'), ''),
     # 顿号、改为半角空格
-    (re.compile(r'、'), ' '),
-    (re.compile(r'､'), ' '),
+    (re.compile(r'、'), ' '), (re.compile(r'､'), ' '),
     # remove (...) 非贪婪模式，防止匹配(...)xxx(...)的形式
     (re.compile(r'\(.*?\)'), ''),
     # remove [...] 非贪婪模式，防止匹配[...]xxx[...]的形式
     (re.compile(r'\[.*?\]'), ''),
-    # remove \N
-    (re.compile(r'\\N'), ''),
 ]  # type: list[tuple[re.Pattern, str]]
+
+# 拟声词 v0.1
+mainpats = [
+    'ん',
+    'うむ', 'ええ', 'わあ', 'うわ',
+    'あぁ', 'はぁ', 'うわぁ',
+    'んっ', 'うっ', 'よっ', 'はっ', 'ひっ', 'ほっ', 'あっ', 'えっ', 'なっ', 'わっ',
+    'えへへへ',
+    'あ+?',
+    'う+?',
+    'は{2,}',
+    '(?:うん)+',
+]
+
+pats_ono = [
+    (re.compile(r' ' + pat + r' '), ' ') for pat in mainpats  # 前后都有空格的话，清理后需保留一个空格
+] + [
+    (re.compile(r'(?:^| )' + pat + r'(?: |$)'), '') for pat in mainpats
+]
+# type: list[tuple[re.Pattern, str]]
+
 
 # add \N at each line's start
 pats_final = [
-    (re.compile(r'^'), r'\\N')
+    (re.compile(r'(^|\n)'), r'\1\\N')
 ]  # type: list[tuple[re.Pattern, str]]
 
 oldprint = print
@@ -132,7 +137,7 @@ def shouldMerge(event1:Dialogue, event2:Dialogue, mergeLSymb='') -> tuple[int, s
 def cleanline(line:str, pats:list[tuple[re.Pattern, str]]):
     for pat, repl in pats:
         line = pat.sub(repl, line)
-    line = line.strip(' 　')
+    line = line.strip(' 　')  # 清理两边多余的半角和全角空格
     return line
 
 def removeSFX(line:str):
@@ -141,7 +146,7 @@ def removeSFX(line:str):
     line = ''.join(texts)
     return line
 
-def doclean(inname, outname, pats, lookup):
+def doclean(inname, outname, pats, pats_ono, lookup):
     encoding = 'utf-8-sig'
     outfile = None
     warnings = []
@@ -151,6 +156,7 @@ def doclean(inname, outname, pats, lookup):
         outfile = open(outname, 'w', encoding='utf-8')
 
         cnter_mg = 0
+        cnter_ono = 0
         cnter_cv = 0
         procid = 0  # number of processed lines
         i = 0
@@ -166,20 +172,27 @@ def doclean(inname, outname, pats, lookup):
             procid += 1
             oline = removeSFX(doc.events[i].text)
             nline = cleanline(removeSFX(doc.events[i].text), pats)
+            reason = ''
+            # 清理语气词
+            tmp = nline
+            nline = cleanline(nline, pats_ono)
+            if nline != tmp:
+                reason = '[清理语气词]'
+                print(reason)
+                cnter_ono += 1
 
             # merge and clean lines
             j = i
-            reason = ''
             ret = (-10, '')
             mergeLeftSymb = ''  # 已匹配到的合并标志对左符号
             eventL = doc.events[i]
-            while j+1 < len(doc.events) and (ret:=shouldMerge(eventL, doc.events[j+1], mergeLeftSymb))[0] >= 0:
+            while nline and j+1 < len(doc.events) and (ret:=shouldMerge(eventL, doc.events[j+1], mergeLeftSymb))[0] >= 0:
                 res, symbol = ret
                 j += 1
-                oline += ' + ' + removeSFX(doc.events[j].text)
+                oline += ' ☀ ' + removeSFX(doc.events[j].text)
                 nextline = cleanline(removeSFX(doc.events[j].text), pats)
                 if not nextline: continue
-                sep = '　'  # 全角空格
+                sep = MERGE_SEP
                 if res == 1:
                     # 匹配到符号对，且继续拼接
                     mergeLeftSymb = symbol
@@ -223,6 +236,18 @@ def doclean(inname, outname, pats, lookup):
                 # did merge, print msg
                 # 再次清理一遍，因为有可能合并过后产生新的成对括号等符合清理条件的内容
                 nline = cleanline(nline, pats)
+
+                # 清理后，每 MERGE_EVERY 行用全角空格合并在一起
+                items = nline.split(MERGE_SEP)
+                if len(items) > 1:
+                    nitems = []
+                    for i in range(0, len(items), MERGE_EVERY):
+                        # 不需要考虑出界问题
+                        line_mg = '　'.join(items[i:i+MERGE_EVERY])
+                        nitems.append(line_mg)
+                    # 整体用\n合并在一起
+                    nline = '\n'.join(nitems)
+
                 # j为最后一条发生merge的行数
                 if res == 1:
                     warn = f"WARNING: 未找到配对的'{pairs[symbol]}'，请手动修改ass文件使左右标志符号个数一致！"
@@ -237,26 +262,27 @@ def doclean(inname, outname, pats, lookup):
                 warnings.append((procid, warn))
 
             # convert half-width katakana and symbols
-            nline_cv = convertline(nline, lookup)
-            if nline_cv != nline:
+            tmp = nline
+            nline = convertline(nline, lookup)
+            if nline != tmp:
                 reason = '[转换假名]'
                 print(reason)
                 cnter_cv += 1
             # convert done
 
-            if nline_cv == '':
+            if nline == '':
                 print(str(procid)+'.', oline, '-> <删除该行>')
             else:
-                print(str(procid)+'.', oline, '->\n\t', nline_cv)
+                print(str(procid)+'.', oline, '->\n\t', nline.replace('\n','\n\t'))
                 # add \N at start
-                nline_cv = cleanline(nline_cv, pats_final)
-                outfile.write(nline_cv)
+                nline = cleanline(nline, pats_final)
+                outfile.write(nline)
                 outfile.write('\n')
 
             print()
             i = j + 1
 
-        print('处理完成！共合并了', cnter_mg, '行对白，假名转换了', cnter_cv, '行对白，最终生成了', procid, '行对白。')
+        print('处理完成！共合并了', cnter_mg, '行文本，清理了', cnter_ono, '行对白的语气词，转换了', cnter_cv, '行对白的假名，最终生成了', procid, '行对白。')
         print('\n已保存至', outname)
 
         if len(warnings):
@@ -285,7 +311,7 @@ def main():
         print()
         print('正在读取', args.InputFile)
         outname = args.output or mkOutfilename(args.InputFile)
-        doclean(args.InputFile, outname, pats, lookup)
+        doclean(args.InputFile, outname, pats, pats_ono, lookup)
         print()
     except Exception as err:
         print(
