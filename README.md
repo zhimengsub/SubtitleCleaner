@@ -1,3 +1,7 @@
+本仓库共包含三个工具：FullwidthConverter(全角片假名转换器)、SubCleaner(字幕清理器)、Caption2Txt，三者为包含关系。
+
+SubCleaner中包含了FullwidthConverter的功能，Caption2Txt中包含了SubCleaner的功能。
+
 # 程序下载
 
 在[Releases](https://github.com/zhimengsub/SubtitleCleaner/releases)页面选择最新版本的程序下载。
@@ -75,13 +79,11 @@
 
 # Caption2Txt.bat
 
-配合`Caption2Ass`、`SubCleaner`，根据ts生成清理后的台词文本文件。
+说明：调用`Caption2Ass`(请自行搜素下载)、`SubCleaner`，提取ts中的ass，然后生成清理后的台词文本文件。
 
 使用方法：拖入ts文件，会先生成ass，然后生成处理后的txt文件。
 
 注意：必须把本脚本与Caption2Ass_PCR.exe、SubCleaner.exe放在同一目录下才能正常工作！
-
-by 谢耳朵w v1.0
 
 # 提出修改建议 / 运行时的错误和BUG
 
