@@ -8,7 +8,7 @@ SubCleaner中包含了FullwidthConverter的功能，Caption2Txt中包含了SubCl
 
 # FullwidthConverter / 全角片假名转换器
 
-可以将半角片假名及`｡` `｢` `｣` `､` `･`等符号转换为全角形式
+可以将半角：片假名、`｡` `｢` `｣` `､` `･`，全角：数字等符号转换为全角形式
 
 ## 使用方法
 
@@ -41,7 +41,7 @@ SubCleaner中包含了FullwidthConverter的功能，Caption2Txt中包含了SubCl
    - 删除拟声词（具体见[拟声词](#拟声词)）
    - 每一行开头添加`\N`
 3. 假名转换
-   - 每一行使用前述的片假名转换器`FullWidthConverter`处理半角平假名
+   - 每一行使用前述的片假名转换器`FullWidthConverter`处理半角片假名、半角符号、全角数字
 
 ## 使用方法
 
@@ -93,6 +93,9 @@ SubCleaner中包含了FullwidthConverter的功能，Caption2Txt中包含了SubCl
 
 ## FullwidthConverter
 
+- v1.0.3
+  - 修改全角数字为半角数字
+
 - v1.0.2
   - 添加`-q, --quit` `--log`参数，方便命令行调用
 
@@ -105,6 +108,9 @@ SubCleaner中包含了FullwidthConverter的功能，Caption2Txt中包含了SubCl
   - 一次只支持单个文件
 
 ## SubCleaner
+
+- v2.4.2
+  - 使用假名转换器v1.0.3
 
 - v2.4.1
   - 完善台词清理符号
