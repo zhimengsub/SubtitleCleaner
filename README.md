@@ -111,6 +111,7 @@ SubCleaner中包含了FullwidthConverter的功能，Caption2Txt中包含了SubCl
 
 - v2.4.3
   - 顿号替换为全角空格
+  - v2.4.3.002: 拟声词误删较多，暂时关闭该功能
 
 - v2.4.2
   - 使用假名转换器v1.0.3

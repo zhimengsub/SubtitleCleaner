@@ -7,7 +7,7 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.4.3'
+VER = 'v2.4.3.002'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
@@ -53,7 +53,7 @@ pats = [
     (re.compile(r'\[.*?\]'), ''),
 ]  # type: list[tuple[re.Pattern, str]]
 
-# 拟声词 v0.1
+# 拟声词 v0.2
 mainpats = [
     'ん',
     'うむ', 'ええ', 'わあ', 'うわ',
@@ -176,12 +176,12 @@ def doclean(inname, outname, pats, pats_ono, lookup):
             nline = cleanline(removeSFX(doc.events[i].text), pats)
             reason = ''
             # 清理语气词
-            tmp = nline
-            nline = cleanline(nline, pats_ono)
-            if nline != tmp:
-                reason = '[清理语气词]'
-                print(reason)
-                cnter_ono += 1
+            # tmp = nline
+            # nline = cleanline(nline, pats_ono)
+            # if nline != tmp:
+            #     reason = '[清理语气词]'
+            #     print(reason)
+            #     cnter_ono += 1
 
             # merge and clean lines
             j = i
