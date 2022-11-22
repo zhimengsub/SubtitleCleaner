@@ -7,7 +7,7 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.4.3.002'
+VER = 'v2.4.4.002'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
@@ -76,6 +76,9 @@ pats_ono = [
 
 # add \N at each line's start
 pats_final = [
+    # 多个全角空格缩至一个
+    (re.compile(r'　+'), '　'),
+    # 添加\N
     (re.compile(r'(^|\n)'), r'\1\\N')
 ]  # type: list[tuple[re.Pattern, str]]
 
