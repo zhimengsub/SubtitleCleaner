@@ -7,7 +7,7 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.4.4.002'
+VER = 'v2.4.4.002_halfwidth-sp'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
@@ -43,8 +43,8 @@ pats = [
     (re.compile(r'→'), ''), (re.compile(r'…'), ''), (re.compile(r'。'), ''), (re.compile(r'｡'), ''),
     (re.compile(r'！'), ''), (re.compile(r'!'), ''), (re.compile(r'？'), ''), (re.compile(r'\?'), ''),
     (re.compile(r'~'), ''), (re.compile(r'～'), ''), (re.compile(r'∼'), ''), (re.compile(r'・'), ''),
-    # 顿号、改为全角空格
-    (re.compile(r'、'), '　'), (re.compile(r'､'), '　'),
+    # 顿号、改为半角空格
+    (re.compile(r'、'), ' '), (re.compile(r'､'), ' '),
     # 双引号改为单引号
     (re.compile(r'『'), '「'), (re.compile(r'』'), '」'),
     # remove (...) 非贪婪模式，防止匹配(...)xxx(...)的形式
@@ -76,8 +76,8 @@ pats_ono = [
 
 # add \N at each line's start
 pats_final = [
-    # 多个全角空格缩至一个
-    (re.compile(r'　+'), '　'),
+    # 多个半角空格缩至一个
+    (re.compile(r' +'), ' '),
     # 添加\N
     (re.compile(r'(^|\n)'), r'\1\\N')
 ]  # type: list[tuple[re.Pattern, str]]
@@ -242,13 +242,13 @@ def doclean(inname, outname, pats, pats_ono, lookup):
                 # 再次清理一遍，因为有可能合并过后产生新的成对括号等符合清理条件的内容
                 nline = cleanline(nline, pats)
 
-                # 清理后，每 MERGE_EVERY 行用全角空格合并在一起
+                # 清理后，每 MERGE_EVERY 行用半角空格合并在一起
                 items = nline.split(MERGE_SEP)
                 if len(items) > 1:
                     nitems = []
                     for i in range(0, len(items), MERGE_EVERY):
                         # 不需要考虑出界问题
-                        line_mg = '　'.join(items[i:i+MERGE_EVERY])
+                        line_mg = ' '.join(items[i:i+MERGE_EVERY])
                         nitems.append(line_mg)
                     # 整体用\n合并在一起
                     nline = '\n'.join(nitems)
