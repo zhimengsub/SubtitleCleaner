@@ -115,6 +115,9 @@ SubCleaner中包含了FullwidthConverter的功能，Caption2Txt中包含了SubCl
 
 ## SubCleaner
 
+- v2.4.5.001
+  - 一句话内只有一位数字时改为全角，同时出现多位数字时保持半角
+
 - v2.4.4.002_halfwidth-sp
   - 空格全部变为半角
 

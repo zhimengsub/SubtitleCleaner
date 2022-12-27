@@ -7,7 +7,7 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.4.5'
+VER = 'v2.4.5.001'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
@@ -78,16 +78,18 @@ pats_ono = [
 
 
 # 对合并后的每一行进行处理
-to_fullwidth = {'1': '１', '2': '２', '3': '３', '4': '４', '5': '５',
-                '6': '６', '7': '７', '8': '８', '9': '９', '0': '０'}
 pats_final = [
     # 多个半角空格缩至一个
     (re.compile(r' +'), ' '),
-    # 一位数字改为全角，两位以上数字保持半角
-    (re.compile(r'(?<!\d)\d(?!\d)'), lambda x: to_fullwidth[x.group()]),
     # 添加\N
     (re.compile(r'(^|\n)'), r'\1\\N')
 ]  # type: list[tuple[re.Pattern, str]]
+
+# 一句话只有一位数字时改为全角
+to_fullwidth = {'1': '１', '2': '２', '3': '３', '4': '４', '5': '５',
+                '6': '６', '7': '７', '8': '８', '9': '９', '0': '０'}
+pat_single_digit = (re.compile(r'(?<!\d)\d(?!\d)'), lambda x: to_fullwidth[x.group()])
+pat_multi_digit = re.compile(r'\d{2,}')
 
 oldprint = print
 logfile = None
@@ -150,6 +152,13 @@ def cleanline(line:str, pats:list[tuple[re.Pattern, str]]):
     for pat, repl in pats:
         line = pat.sub(repl, line)
     line = line.strip(' 　')  # 清理两边多余的半角和全角空格
+    return line
+
+def specialPostProc(line: str):
+    if not pat_multi_digit.search(line):
+        # 不含多位数字，则把一位数字替换成全角
+        pat, repl = pat_single_digit
+        line = pat.sub(repl, line)
     return line
 
 def removeSFX(line:str):
@@ -288,6 +297,7 @@ def doclean(inname, outname, pats, pats_ono, lookup):
             else:
                 # post process
                 nline = cleanline(nline, pats_final)
+                nline = specialPostProc(nline)
                 outfile.write(nline)
                 outfile.write('\n')
                 print(str(procid)+'. ', oline, ' ->\n\t', nline.replace('\n','\n\t'), sep='')
