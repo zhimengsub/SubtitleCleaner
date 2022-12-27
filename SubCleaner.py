@@ -7,7 +7,7 @@ from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 from FullwidthConverter import MyParser, convertline, lookup
 
-VER = 'v2.4.4.002_halfwidth-sp'
+VER = 'v2.4.5'
 
 DESCRIPTION = '字幕清理器\n' + \
               '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为文本文件\n' + \
@@ -35,18 +35,21 @@ single_end = [
 
 # 清理相关
 pats = [
-    # remove symbols
+    # 删除符号
     (re.compile(r'\\N'), ''),
     (re.compile(r'《'), ''), (re.compile(r'》'), ''),
     (re.compile(r'<'), ''), (re.compile(r'＜'), ''), (re.compile(r'〈'), ''),
     (re.compile(r'>'), ''), (re.compile(r'＞'), ''), (re.compile(r'〉'), ''),
-    (re.compile(r'→'), ''), (re.compile(r'…'), ''), (re.compile(r'。'), ''), (re.compile(r'｡'), ''),
-    (re.compile(r'！'), ''), (re.compile(r'!'), ''), (re.compile(r'？'), ''), (re.compile(r'\?'), ''),
-    (re.compile(r'~'), ''), (re.compile(r'～'), ''), (re.compile(r'∼'), ''), (re.compile(r'・'), ''),
+    (re.compile(r'→'), ''), (re.compile(r'…'), ''),
+    (re.compile(r'。'), ''), (re.compile(r'｡'), ''),
+    (re.compile(r'！'), ''), (re.compile(r'!'), ''),
+    (re.compile(r'？'), ''), (re.compile(r'\?'), ''),
+    (re.compile(r'~'), ''), (re.compile(r'～'), ''), (re.compile(r'∼'), ''),
+    (re.compile(r'・'), ''),
     # 顿号、改为半角空格
     (re.compile(r'、'), ' '), (re.compile(r'､'), ' '),
-    # 双引号改为单引号
-    (re.compile(r'『'), '「'), (re.compile(r'』'), '」'),
+    # 双引号改为单引号（取消）
+    # (re.compile(r'『'), '「'), (re.compile(r'』'), '」'),
     # remove (...) 非贪婪模式，防止匹配(...)xxx(...)的形式
     (re.compile(r'\(.*?\)'), ''),
     # remove [...] 非贪婪模式，防止匹配[...]xxx[...]的形式
@@ -74,10 +77,14 @@ pats_ono = [
 # type: list[tuple[re.Pattern, str]]
 
 
-# add \N at each line's start
+# 对合并后的每一行进行处理
+to_fullwidth = {'1': '１', '2': '２', '3': '３', '4': '４', '5': '５',
+                '6': '６', '7': '７', '8': '８', '9': '９', '0': '０'}
 pats_final = [
     # 多个半角空格缩至一个
     (re.compile(r' +'), ' '),
+    # 一位数字改为全角，两位以上数字保持半角
+    (re.compile(r'(?<!\d)\d(?!\d)'), lambda x: to_fullwidth[x.group()]),
     # 添加\N
     (re.compile(r'(^|\n)'), r'\1\\N')
 ]  # type: list[tuple[re.Pattern, str]]
@@ -194,7 +201,8 @@ def doclean(inname, outname, pats, pats_ono, lookup):
             while nline and j+1 < len(doc.events) and (ret:=shouldMerge(eventL, doc.events[j+1], mergeLeftSymb))[0] >= 0:
                 res, symbol = ret
                 j += 1
-                oline += ' ☀ ' + removeSFX(doc.events[j].text)
+                oline += ' ▒ ' + removeSFX(doc.events[j].text)
+                # 提前clean一遍，为了log好看一点
                 nextline = cleanline(removeSFX(doc.events[j].text), pats)
                 if not nextline: continue
                 sep = MERGE_SEP
@@ -238,11 +246,11 @@ def doclean(inname, outname, pats, pats_ono, lookup):
             # merge done
             res, symbol = ret
             if j != i:
-                # did merge, print msg
+                # did merge
                 # 再次清理一遍，因为有可能合并过后产生新的成对括号等符合清理条件的内容
                 nline = cleanline(nline, pats)
 
-                # 清理后，每 MERGE_EVERY 行用半角空格合并在一起
+                # 清理后，连续 MERGE_EVERY 行用半角空格合并在一起
                 items = nline.split(MERGE_SEP)
                 if len(items) > 1:
                     nitems = []
@@ -278,11 +286,11 @@ def doclean(inname, outname, pats, pats_ono, lookup):
             if nline == '':
                 print(str(procid)+'.', oline, '-> <删除该行>')
             else:
-                print(str(procid)+'.', oline, '->\n\t', nline.replace('\n','\n\t'))
-                # add \N at start
+                # post process
                 nline = cleanline(nline, pats_final)
                 outfile.write(nline)
                 outfile.write('\n')
+                print(str(procid)+'. ', oline, ' ->\n\t', nline.replace('\n','\n\t'), sep='')
 
             print()
             i = j + 1

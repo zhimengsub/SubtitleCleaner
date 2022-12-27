@@ -64,6 +64,7 @@ def mkOutfilename(infile: str, namesuf='_out'):
 
 def convertline(line: str, lookup: dict):
     # 日字的数字、全角空格、全角标点符号不能改，可能还是改回查找表，并且额外增加浊音半浊音
+    # 不能用str.translate，因为带浊音的假名是两个字符
     # line = unicodedata.normalize('NFKC', line)
     for old, new in lookup.items():
         line = line.replace(old, new)
