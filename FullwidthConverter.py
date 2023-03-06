@@ -1,8 +1,12 @@
-import argparse
 import os
-import sys
 import traceback
 from argparse import RawTextHelpFormatter
+from pathlib import Path
+from typing import Union
+
+from utils.argparser import MyParser
+from utils.logfile import _print, setLogfile, closeLogfile, print
+from utils.misc import mkFilepath
 
 VER = 'v1.0.4_halfwidth-sp'
 
@@ -34,21 +38,6 @@ lookup = {
     'ﾗ': 'ラ', 'ﾘ': 'リ', 'ﾙ': 'ル', 'ﾚ': 'レ', 'ﾛ': 'ロ',
     'ﾜ': 'ワ', 'ﾝ': 'ン', 'ｦ': 'ヲ',
 }
-oldprint = print
-logfile = None
-def print(*args, **kwargs):
-    oldprint(*args, **kwargs)
-    if logfile:
-        oldprint(*args, **kwargs, file=logfile)
-
-class MyParser(argparse.ArgumentParser):
-    def error(self, message):
-        self.print_help()
-        print()
-        args = {'prog': self.prog, 'message': message}
-        sys.stderr.write(('%(prog)s: error: %(message)s\n') % args)
-        os.system('pause')
-        self.exit(2)
 
 def initparser():
     parser = MyParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
@@ -58,10 +47,6 @@ def initparser():
     parser.add_argument('--log', action='store_true', help='记录日志，执行结果输出到<输入文件名>_log.txt')
     return parser
 
-def mkOutfilename(infile: str, namesuf='_out'):
-    name, suf = os.path.splitext(infile)
-    return name+namesuf+suf
-
 def convertline(line: str, lookup: dict):
     # 日字的数字、全角空格、全角标点符号不能改，可能还是改回查找表，并且额外增加浊音半浊音
     # 不能用str.translate，因为带浊音的假名是两个字符
@@ -70,15 +55,15 @@ def convertline(line: str, lookup: dict):
         line = line.replace(old, new)
     return line
 
-def doconvert(inname, outname, lookup):
+def doconvert(inpath, outpath: Union[str, Path], lookup):
     cnter = 0
     encodings = ['utf-8-sig', 'gbk']
     infile = None
     outfile = None
     for encoding in encodings:
         try:
-            infile = open(inname, 'r', encoding=encoding)
-            outfile = open(outname, 'w', encoding=encoding)
+            infile = open(inpath, 'r', encoding=encoding)
+            outfile = open(outpath, 'w', encoding=encoding)
             while line := infile.readline():
                 nline = convertline(line, lookup)
                 if nline != line:
@@ -86,7 +71,7 @@ def doconvert(inname, outname, lookup):
                     print(line.rstrip('\n'), '->\n\t', nline.rstrip('\n'))
                     print()
                 outfile.write(nline)
-            print('\n完成! 共转换了', cnter, '行，已保存至', outname)
+            print('\n完成! 共转换了', cnter, '行，已保存至', str(outpath))
             return True
         except UnicodeDecodeError:
             continue
@@ -104,17 +89,17 @@ def doconvert(inname, outname, lookup):
     return False
 
 def main():
-    global logfile
     parser = initparser()
     args = parser.parse_args()
     if args.log:
-        logfile = open(mkOutfilename(args.InputFile, '_log'), 'w', encoding='utf-8')
+        logpath = mkFilepath(args.InputFile, '.txt', '_log')
+        setLogfile(logpath)
     try:
         print(DESCRIPTION)
         print()
         print('正在读取', args.InputFile)
 
-        outname = args.output or mkOutfilename(args.InputFile)
+        outname = args.output or mkFilepath(args.InputFile, 'txt')
         doconvert(args.InputFile, outname, lookup)
 
         print()
@@ -123,10 +108,10 @@ def main():
             '\n发生了未知错误！请将下面的报错信息及待转换文件提交到 https://github.com/barryZZJ/SubtitleCleaner/issues')
         traceback.print_exc()
     finally:
-        if logfile:
-            logfile.close()
-            oldprint('日志文件已保存至', mkOutfilename(args.InputFile, '_log'))
-            oldprint()
+        if args.log:
+            closeLogfile()
+            _print('日志文件已保存至', str(logpath))
+            _print()
 
         if not args.quit:
             os.system('pause')

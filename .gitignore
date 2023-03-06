@@ -136,3 +136,4 @@ dmypy.json
 *.spec
 !Caption2Txt.bat
 /.idea
+*.clt
