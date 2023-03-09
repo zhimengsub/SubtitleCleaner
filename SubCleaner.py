@@ -20,7 +20,7 @@ from utils.mydialogue import MyDialogue
 VER = 'v3.0.0'
 
 DESCRIPTION = '字幕清理器\n' + \
-              '输入.ass字幕文件，提取对话文本，进行台词合并、清理、假名转换后输出为.ass或.txt文件\n' + \
+              '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
               '—— ' + VER + ' by 谢耳朵w\n\n' + \
               '使用方法：将待转换文件拖放到本程序上即可，也可以使用命令行运行进行更多配置。\n\n' + \
               '详细介绍、获取最新版本、提交bug请前往 https://github.com/zhimengsub/SubtitleCleaner'
