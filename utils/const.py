@@ -44,6 +44,7 @@ pats_rm = [
     (re.compile(r'~'), ''), (re.compile(r'～'), ''), (re.compile(r'∼'), ''),
     (re.compile(r'・'), ''),
     (re.compile(r'♪'), ''),
+    (re.compile(r'≫'), ''),
     # 顿号、改为半角空格
     (re.compile(r'、'), ' '), (re.compile(r'､'), ' '),
     # 双引号改为单引号（取消）

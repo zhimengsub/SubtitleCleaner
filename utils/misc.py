@@ -38,11 +38,12 @@ def overlaps(e1: Dialogue, e2: Dialogue) -> bool:
 
 
 def extendEvent(e1: Dialogue, e2: Dialogue, sep: str, ignore_sep_on_pairs=True) -> Dialogue:
+    """ignore_sep_on_pairs: do not add sep after left symbol / before end symbol, i.e. `[text]` not `[ text ]`"""
     if e2.text:
         # extend end time
         e1.end = e2.end
-        # extend text
-        if ignore_sep_on_pairs and any(e1.text.endswith(left) or e1.text.endswith(right) or e2.text.startswith(right) for left, right in pairs.items()):
+        # extend text, but do not add sep inside pairs, i.e. `[text]` not `[ text ]`
+        if ignore_sep_on_pairs and any(e1.text.endswith(left) or e2.text.startswith(right) for left, right in pairs.items()):
             e1.text = e1.text + e2.text
         else:
             e1.text = e1.text + sep + e2.text

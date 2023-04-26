@@ -17,7 +17,7 @@ from utils.misc import mkFilepath, MergeType, removeSFX, overlaps, save, formatD
 from utils.conf import conf
 from utils.mydialogue import MyDialogue
 
-VER = 'v3.0.0'
+VER = 'v3.0.2'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -61,21 +61,21 @@ def postProcess(event: Dialogue) -> Dialogue:
     return event
 
 
-def findMergeStart(event: Dialogue) -> tuple[MergeType, str]:
+def findMergeStart(event: Dialogue, ignored_mergetypes: list[MergeType]) -> tuple[MergeType, str]:
     """
     :returns: mergetype and matched symbol
     """
-    if conf.merge.pair:
+    if conf.merge.pair and MergeType.Pair not in ignored_mergetypes:
         for pairleft in pairs:
             if pairleft in event.text:
                 return MergeType.Pair, pairleft
 
-    if conf.merge.singlesuf:
+    if conf.merge.singlesuf and MergeType.Singlesuf not in ignored_mergetypes:
         for suf in singlesufs:
             if event.text.endswith(suf):
                 return MergeType.Singlesuf, suf
 
-    if conf.merge.time:
+    if conf.merge.time and MergeType.Time not in ignored_mergetypes:
         return MergeType.Time, ''
 
     return MergeType.No, ''
@@ -126,12 +126,12 @@ def findMergeEnd(events: list[Dialogue],
         raise NotImplementedError('Unexpected mergetype ' + str(mergetype))
 
 
-def findMergeInterval(events: list[Dialogue], start: int) -> tuple[int, str, MergeType]:
+def findMergeInterval(events: list[Dialogue], start: int, ignored_mergetypes: list[MergeType]) -> tuple[int, str, MergeType]:
     """
     :returns: end index of merged events; merge reason (or warning msg if end index == -1); Mergetype
     """
     eventL = events[start]
-    mergetype, symb = findMergeStart(eventL)
+    mergetype, symb = findMergeStart(eventL, ignored_mergetypes)
 
     reason = ''
     if mergetype == MergeType.No:
@@ -159,9 +159,10 @@ def mergeEvents(events: list[Dialogue],
     """
     merge_list = [events[start]]  # 所有需要合并的对白
     start_ = start
+    ignored_mergetypes = []  # 不考虑的mergetype
     while True:
         # 考虑到存在下一行时间仍相同，或者出现新的标识符的情况，故不断搜索直到没有合并的情况
-        end, reason, mergetype = findMergeInterval(events, start_)
+        end, reason, mergetype = findMergeInterval(events, start_, ignored_mergetypes)
 
         if end == -1:
             warning(reason)
@@ -169,7 +170,12 @@ def mergeEvents(events: list[Dialogue],
             end = start_
 
         if end == start_:
-            break
+            # 只有MergeType.No或MergeType.Pair时才会出现此情况，
+            # 后者时应考虑存在其他的mergetype，故需要排除掉pair后continue
+            if mergetype == MergeType.No:
+                break
+            ignored_mergetypes.append(mergetype)
+            continue
 
         log_reason.append(reason)
         merge_list.extend(MyDialogue(event, mergetype) for event in events[start_+1:end+1])
