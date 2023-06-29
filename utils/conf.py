@@ -19,6 +19,10 @@ def loadConfigs(path: Path) -> Dict:
             # if `remove_overlap` is True, then join overlapped lines with `sep_on_overlap`
             sep_on_overlap=' ',
         ),
+        # remove 注音假名
+        remove_rubi=True,
+        # remove format tags that are enclosed in '{}'
+        remove_format_tags=True,
         # remove_comments: remove (...) format
         remove_comments=True,
         remove_overlap=False,

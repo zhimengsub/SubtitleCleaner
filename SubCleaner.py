@@ -17,7 +17,7 @@ from utils.misc import mkFilepath, MergeType, removeSFX, overlaps, save, formatD
 from utils.conf import conf
 from utils.mydialogue import MyDialogue
 
-VER = 'v3.0.2'
+VER = 'v3.0.3'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -185,19 +185,20 @@ def mergeEvents(events: list[Dialogue],
     for event in merge_list:
         cleanEvent(event, pats_stripsuf)
 
-    # 合并后清理，再拆开，然后再每隔limit个用conf.merge.sep合并在一起
-
+    # 1.合并后清理，2.再拆开，3.然后再每隔limit个用conf.merge.sep合并在一起
+    # 1.
     merged = joinEvents(merge_list, MERGE_SEP, ignore_sep_on_pairs=False)
     cleanEvent(merged, pats_rmpairs)
     if conf.remove_comments:
         cleanEvent(merged, pats_rmcomment)
+    # 2.
     merge_list = splitEvents(merged, MERGE_SEP)
     merged_events = []
     limit = len(merge_list) if limit <= 0 else limit
     for i in range(0, len(merge_list), limit):
         joined = joinEvents(merge_list[i: i+limit], conf.merge.sep, ignore_sep_on_pairs=True)
         merged_events.append(joined)
-
+    # 3.
     if remove_overlap:
         # 如果时间有重叠，再把重叠时间的对白合并
         merged_events = joinEventsByTime(merged_events, conf.merge.sep_on_overlap)
@@ -212,7 +213,8 @@ def processDoc(doc: ass.Document,
     events_old = [None] * len(doc.events)  # type: list[Optional[Dialogue]]
     for i, event in enumerate(doc.events):
         if event.TYPE == 'Dialogue':
-            removeSFX(event)
+            if conf.remove_format_tags:
+                removeSFX(event)
             events_old[i] = deepcopy(event)
             cleanEvent(event, pats_rm)
             if conf.remove_comments:
@@ -231,9 +233,14 @@ def processDoc(doc: ass.Document,
         # filter out non Dialogue and non rubi
         if doc.events[i].TYPE != 'Dialogue' or doc.events[i].style.lower() == 'rubi':
             if doc.events[i].style.lower() == 'rubi':
-                print('[跳过Rubi台词]')
+                if conf.remove_rubi:
+                    print('[跳过Rubi台词]')
+                else:
+                    print('[保留Rubi台词]')
+                    events_out.append(doc.events[i])
                 print(doc.events[i].text)
                 print()
+
             i += 1
             continue
 
@@ -275,6 +282,8 @@ def processDoc(doc: ass.Document,
                     reason = '[转换假名]'
                     print(reason)
                     cnter_cv += 1
+
+            # clean all format_tags or only keep the first one
 
             # post process
             if conf.add_newline_prefix:

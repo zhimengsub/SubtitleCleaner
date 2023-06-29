@@ -46,7 +46,7 @@
 
     默认关闭。开启后，输出的每一行都不会有时间重叠，对有时间重叠的对白每达到`merge.limit`行后用`merge.sep_on_overlap`（默认为空格）隔开。
   
-    【相当于对原来合并+清理后的结果再次进行时间合并，且达到`merge.limit`后使用`merge.sep_on_overlap`隔开】
+    【相当于对原来“合并+清理的结果”再次进行时间合并，且达到`merge.limit`后使用`merge.sep_on_overlap`隔开】
 
 ### 清理
 
@@ -58,6 +58,8 @@
 4. 以下符号替换为半角空格：
    
     `、` `､`
+5. rubi字幕（平假名注音字幕）（开关：`remove_rubi`，默认开启）
+6. 特效标签（花括号括起来的），开启时全部删除，关闭时保留（如果合并了多行，只保留第一行的）（开关：`remove_format_tags`，默认开启）
 
 ### 其他
 
@@ -101,6 +103,8 @@
         "limit": 2,
         "sep_on_overlap": " "
     },
+    "remove_rubi": true,
+    "remove_format_tags": true,
     "remove_comments": true,
     "remove_overlap": false,
     "convert_width": true,
@@ -193,6 +197,9 @@ SubCleaner.py [-h] [-o OUTFILE] [-q] [--offsetms OFFSETMS] [--log] InputFile
   - 一次只支持单个文件
 
 ## SubCleaner
+
+- v3.0.2
+  - 支持新的参数
 
 - v3.0.0
   - 重构代码，支持输出ass
