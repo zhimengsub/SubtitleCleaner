@@ -17,7 +17,7 @@ from utils.misc import mkFilepath, MergeType, removeSFX, overlaps, save, formatD
 from utils.conf import conf
 from utils.mydialogue import MyDialogue
 
-VER = 'v3.0.3'
+VER = 'v3.0.3.002'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -231,13 +231,9 @@ def processDoc(doc: ass.Document,
     i = 0  # event index
     while i < len(doc.events):
         # filter out non Dialogue and non rubi
-        if doc.events[i].TYPE != 'Dialogue' or doc.events[i].style.lower() == 'rubi':
+        if doc.events[i].TYPE != 'Dialogue' or (doc.events[i].style.lower() == 'rubi' and conf.remove_rubi):
             if doc.events[i].style.lower() == 'rubi':
-                if conf.remove_rubi:
-                    print('[跳过Rubi台词]')
-                else:
-                    print('[保留Rubi台词]')
-                    events_out.append(doc.events[i])
+                print('[跳过Rubi台词]')
                 print(doc.events[i].text)
                 print()
 
@@ -267,7 +263,11 @@ def processDoc(doc: ass.Document,
             continue
 
         log_reason = []
-        end, merged_events = mergeEvents(doc.events, i, conf.merge.limit, procid, warnings, log_reason, conf.remove_overlap)
+        if doc.events[i].style.lower() == 'rubi':
+            # don't merge rubi
+            end, merged_events = i, [doc.events[i]]
+        else:
+            end, merged_events = mergeEvents(doc.events, i, conf.merge.limit, procid, warnings, log_reason, conf.remove_overlap)
         if end != i:
             cnter_mg += end - i + 1
 
