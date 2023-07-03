@@ -16,8 +16,10 @@ from utils.misc import mkFilepath, MergeType, removeSFX, overlaps, save, formatD
     joinEventsByTime
 from utils.conf import conf
 from utils.mydialogue import MyDialogue
+from utils.patterns import pairs, singlesufs, pats_stripsuf, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
+    pats_final
 
-VER = 'v3.0.3.002'
+VER = 'v3.0.4'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -44,21 +46,19 @@ def cleanEvent(event:Dialogue, pats:list[tuple[re.Pattern, str]]):
     event.text = text
 
 
-def postProcess(event: Dialogue) -> Dialogue:
+def format_digit(event: Dialogue):
     text = event.text
-    if conf.format_digit:
-        digit_count = len(re.findall(r'\d', text))
-        if digit_count == 1:
-            # 一位数字替换成全角
-            text = re.sub(r'\d', lambda x: to_fullwidth.get(x.group(), x.group()), text)
-        elif digit_count > 1:
-            # 多位数字换成半角
-            out = ''
-            for c in text:
-                out += to_halfwidth.get(c, c)
-            text = out
+    digit_count = len(re.findall(r'\d', text))
+    if digit_count == 1:
+        # 一位数字替换成全角
+        text = re.sub(r'\d', lambda x: to_fullwidth.get(x.group(), x.group()), text)
+    elif digit_count > 1:
+        # 多位数字换成半角
+        out = ''
+        for c in text:
+            out += to_halfwidth.get(c, c)
+        text = out
     event.text = text
-    return event
 
 
 def findMergeStart(event: Dialogue, ignored_mergetypes: list[MergeType]) -> tuple[MergeType, str]:
@@ -216,9 +216,6 @@ def processDoc(doc: ass.Document,
             if conf.remove_format_tags:
                 removeSFX(event)
             events_old[i] = deepcopy(event)
-            cleanEvent(event, pats_rm)
-            if conf.remove_comments:
-                cleanEvent(event, pats_rmcomment)
 
     warnings = []
     events_out = []
@@ -283,16 +280,23 @@ def processDoc(doc: ass.Document,
                     print(reason)
                     cnter_cv += 1
 
-            # clean all format_tags or only keep the first one
-
             # post process
             if conf.add_newline_prefix:
                 cleanEvent(merged, pats_prefix)
             cleanEvent(merged, pats_final)
-            postProcess(merged)
+            cleanEvent(merged, pats_rm)
+            if conf.remove_comments:
+                cleanEvent(merged, pats_rmcomment)
+            if conf.format_digit:
+                format_digit(merged)
 
             merged.start += offsetms
             merged.end += offsetms
+
+        # clean all format_tags or only keep the first one
+        need_remove_tags = (merged_events if conf.remove_format_tags else merged_events[1:])
+        for event in need_remove_tags:
+            removeSFX(event)
 
         tmp = []
         for ind in range(i, end + 1):

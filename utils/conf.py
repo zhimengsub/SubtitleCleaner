@@ -19,6 +19,7 @@ def loadConfigs(path: Path) -> Dict:
             # if `remove_overlap` is True, then join overlapped lines with `sep_on_overlap`
             sep_on_overlap=' ',
         ),
+        removed_symbols='…。｡！!？?~～∼・♪≫《》<>＜＞〈〉',
         # remove 注音假名
         remove_rubi=True,
         # remove format tags that are enclosed in '{}'
@@ -45,7 +46,7 @@ def loadConfigs(path: Path) -> Dict:
 
 def saveConfigs(path: Path, conf: Dict):
     with path.open('w', encoding='utf8') as f:
-        json.dump(conf.to_dict(), f, indent=4)
+        json.dump(conf.to_dict(), f, indent=4, ensure_ascii=False)
 
 
 conf = loadConfigs(PATHS.CONF)

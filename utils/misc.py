@@ -9,7 +9,7 @@ import ass
 from ass import Dialogue
 from ass_tag_parser import parse_ass, AssText
 
-from utils.const import pairs
+from utils.patterns import pairs
 
 
 def mkFilepath(infile: str, filesuf: str, namesuf='') -> Path:
