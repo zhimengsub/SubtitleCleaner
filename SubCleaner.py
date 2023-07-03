@@ -12,14 +12,14 @@ from FullwidthConverter import convertline, lookup
 from utils.argparser import MyParser
 from utils.const import *
 from utils.logfile import _print, setLogfile, closeLogfile, print, warning, error
-from utils.misc import mkFilepath, MergeType, removeSFX, overlaps, save, formatDelta, joinEvents, splitEvents, \
-    joinEventsByTime
+from utils.misc import mkFilepath, remove_tags, overlaps, save, formatDelta, joinEvents, splitEvents
+from utils.mergetype import MergeType
 from utils.conf import conf
 from utils.mydialogue import MyDialogue
 from utils.patterns import pairs, singlesufs, pats_stripsuf, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
     pats_final
 
-VER = 'v3.0.4'
+VER = 'v3.0.5'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -61,18 +61,18 @@ def format_digit(event: Dialogue):
     event.text = text
 
 
-def findMergeStart(event: Dialogue, ignored_mergetypes: list[MergeType]) -> tuple[MergeType, str]:
+def findMergeStart(event: MyDialogue, ignored_mergetypes: list[MergeType]) -> tuple[MergeType, str]:
     """
     :returns: mergetype and matched symbol
     """
     if conf.merge.pair and MergeType.Pair not in ignored_mergetypes:
         for pairleft in pairs:
-            if pairleft in event.text:
+            if pairleft in event.plain_text:
                 return MergeType.Pair, pairleft
 
     if conf.merge.singlesuf and MergeType.Singlesuf not in ignored_mergetypes:
         for suf in singlesufs:
-            if event.text.endswith(suf):
+            if event.plain_text.endswith(suf):
                 return MergeType.Singlesuf, suf
 
     if conf.merge.time and MergeType.Time not in ignored_mergetypes:
@@ -126,7 +126,7 @@ def findMergeEnd(events: list[Dialogue],
         raise NotImplementedError('Unexpected mergetype ' + str(mergetype))
 
 
-def findMergeInterval(events: list[Dialogue], start: int, ignored_mergetypes: list[MergeType]) -> tuple[int, str, MergeType]:
+def findMergeInterval(events: list[MyDialogue], start: int, ignored_mergetypes: list[MergeType]) -> tuple[int, str, MergeType]:
     """
     :returns: end index of merged events; merge reason (or warning msg if end index == -1); Mergetype
     """
@@ -146,18 +146,19 @@ def findMergeInterval(events: list[Dialogue], start: int, ignored_mergetypes: li
     return end, reason, mergetype
 
 
-def mergeEvents(events: list[Dialogue],
-                start: int,
-                limit: int,
-                procid: int,
-                warnings: list,
-                log_reason: list,
-                remove_overlap: bool) -> tuple[int,
-                                           list[Dialogue]]:
+def mergeEvents(
+    events: list[MyDialogue],
+    start: int,
+    limit: int,
+    procid: int,
+    warnings: list,
+    log_reason: list,
+    ignore_limit_on_overlap: bool,
+) -> tuple[int, list[Dialogue]]:
     """
     returns: end index of merged events; merged events; start and end index of each merged event
     """
-    merge_list = [events[start]]  # 所有需要合并的对白
+    merge_list: list[MyDialogue] = [events[start]]  # 所有需要合并的对白
     start_ = start
     ignored_mergetypes = []  # 不考虑的mergetype
     while True:
@@ -181,28 +182,50 @@ def mergeEvents(events: list[Dialogue],
         merge_list.extend(MyDialogue(event, mergetype) for event in events[start_+1:end+1])
         start_ = end
 
-    # 清理合并标志符号
     for event in merge_list:
+        # 清理合并标志符号
         cleanEvent(event, pats_stripsuf)
+        # 清理各种符号
+        cleanEvent(event, pats_rm)
+
+    # clean format_tags (remove all or only keep the first one)
+    events_need_remove_tags = (merge_list if conf.remove_format_tags else merge_list[1:])
+    for event in events_need_remove_tags:
+        remove_tags(event)
 
     # 1.合并后清理，2.再拆开，3.然后再每隔limit个用conf.merge.sep合并在一起
     # 1.
-    merged = joinEvents(merge_list, MERGE_SEP, ignore_sep_on_pairs=False)
+    merged = joinEvents(
+        merge_list,
+        sep=MERGE_SEP,
+        sep_on_overlap=MERGE_SEP_ON_OVERLAP,
+        ignore_sep_on_pairs=False
+    )
     cleanEvent(merged, pats_rmpairs)
     if conf.remove_comments:
         cleanEvent(merged, pats_rmcomment)
     # 2.
-    merge_list = splitEvents(merged, MERGE_SEP)
-    merged_events = []
-    limit = len(merge_list) if limit <= 0 else limit
-    for i in range(0, len(merge_list), limit):
-        joined = joinEvents(merge_list[i: i+limit], conf.merge.sep, ignore_sep_on_pairs=True)
-        merged_events.append(joined)
+    merge_list_cleaned = splitEvents(
+        merged,
+        sep=MERGE_SEP,
+        sep_on_overlap=MERGE_SEP_ON_OVERLAP,
+        overlapped_chunk_prefix=OVERLAPPED_CHUNK_PREFIX
+    )
     # 3.
-    if remove_overlap:
-        # 如果时间有重叠，再把重叠时间的对白合并
-        merged_events = joinEventsByTime(merged_events, conf.merge.sep_on_overlap)
-
+    merged_events = []
+    limit = len(merge_list_cleaned) if limit <= 0 else limit
+    if ignore_limit_on_overlap:
+        limit = len(merge_list_cleaned)
+    for i in range(0, len(merge_list_cleaned), limit):
+        joined = joinEvents(
+            merge_list_cleaned[i: i+limit],
+            sep=conf.merge.sep,
+            sep_on_overlap=conf.merge.sep_on_overlap,
+            special_prefix=conf.merge.special_prefix,
+            sep_on_special_prefix=conf.merge.sep_on_special_prefix,
+            ignore_sep_on_pairs=True
+        )
+        merged_events.append(joined)
     return end, merged_events
 
 
@@ -213,8 +236,9 @@ def processDoc(doc: ass.Document,
     events_old = [None] * len(doc.events)  # type: list[Optional[Dialogue]]
     for i, event in enumerate(doc.events):
         if event.TYPE == 'Dialogue':
-            if conf.remove_format_tags:
-                removeSFX(event)
+            # add plain_text field for easier merge finding
+            doc.events[i] = MyDialogue(doc.events[i])
+            # record old event for logging
             events_old[i] = deepcopy(event)
 
     warnings = []
@@ -239,7 +263,7 @@ def processDoc(doc: ass.Document,
 
         procid += 1
 
-        reason = ''
+        # reason = ''
         # 清理语气词 # TODO 开关
         # tmp = nline
         # nline = cleanline(nline, pats_ono)
@@ -264,12 +288,21 @@ def processDoc(doc: ass.Document,
             # don't merge rubi
             end, merged_events = i, [doc.events[i]]
         else:
-            end, merged_events = mergeEvents(doc.events, i, conf.merge.limit, procid, warnings, log_reason, conf.remove_overlap)
+            end, merged_events = mergeEvents(
+                doc.events,
+                i,
+                conf.merge.limit,
+                procid,
+                warnings,
+                log_reason,
+                conf.merge.ignore_limit_on_overlap
+            )
         if end != i:
             cnter_mg += end - i + 1
 
         print(f'{procid}.', ' '.join(log_reason))
 
+        # 这里得到的是已经合并了的event，只不过根据limit又进行了分隔
         for merged in merged_events:
             # convert half-width katakana and symbols
             if conf.convert_width:
@@ -284,19 +317,11 @@ def processDoc(doc: ass.Document,
             if conf.add_newline_prefix:
                 cleanEvent(merged, pats_prefix)
             cleanEvent(merged, pats_final)
-            cleanEvent(merged, pats_rm)
-            if conf.remove_comments:
-                cleanEvent(merged, pats_rmcomment)
             if conf.format_digit:
                 format_digit(merged)
 
             merged.start += offsetms
             merged.end += offsetms
-
-        # clean all format_tags or only keep the first one
-        need_remove_tags = (merged_events if conf.remove_format_tags else merged_events[1:])
-        for event in need_remove_tags:
-            removeSFX(event)
 
         tmp = []
         for ind in range(i, end + 1):

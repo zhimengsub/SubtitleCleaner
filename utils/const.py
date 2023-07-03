@@ -21,4 +21,8 @@ to_halfwidth = {v: k for k, v in to_fullwidth.items()}
 pat_single_digit = (re.compile(r'(?<!\d)\d(?!\d)'), lambda x: to_fullwidth.get(x.group(), x.group()))
 pat_multi_digit = (re.compile(r'\d{2,}'), lambda x: ''.join(to_halfwidth.get(c, c) for c in x))
 
-MERGE_SEP = '▒'
+MERGE_SEP = '░'
+MERGE_SEP_ON_OVERLAP = '▒'
+MERGE_SEP_ON_SPECIAL_PREFIX = '▓'
+OVERLAPPED_CHUNK_PREFIX = '█'
+'''mark a chunk as overlapped by adding this prefix, for spliiting again'''

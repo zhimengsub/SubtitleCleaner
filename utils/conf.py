@@ -12,21 +12,31 @@ def loadConfigs(path: Path) -> Dict:
             pair=True,
             singlesuf=True,
             time=False,
-            sep=' ',
             # limit: split merged line every `limit` lines, in case line become too long;
             # 0 is infinite
             limit=2,
-            # if `remove_overlap` is True, then join overlapped lines with `sep_on_overlap`
+            # True to ensure no overlap
+            ignore_limit_on_overlap=False,
+            sep=' ',
+            # if merge.time is True, then join overlapped lines with `sep_on_overlap`
             sep_on_overlap=' ',
+            # special prefix for sep_on_special_prefix
+            special_prefix='',
+            # if overlapped line has the above prefix, then use another sep
+            # (usually a break line for a different speaker)
+            sep_on_special_prefix=r'\N',
         ),
-        removed_symbols='…。｡！!？?~～∼・♪≫《》<>＜＞〈〉',
+        symbols=Dict(
+            remove='…。｡！!？?~～∼・♪≫《》<>＜＞〈〉',
+            replace_key='、､',
+            replace_val='  ',
+        ),
         # remove 注音假名
         remove_rubi=True,
         # remove format tags that are enclosed in '{}'
         remove_format_tags=True,
         # remove_comments: remove (...) format
         remove_comments=True,
-        remove_overlap=False,
         convert_width=True,
         # add '\N' at each line's start
         add_newline_prefix=True,

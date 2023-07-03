@@ -28,16 +28,22 @@ pats_stripsuf: list[tuple[re.Pattern, str]] = [
 ]
 pats_rm: list[tuple[re.Pattern, str]] = [
     # 删除符号
-    (re.compile('[' + conf.removed_symbols + ']'), ''),
+    (re.compile('[' + conf.symbols.remove + ']'), ''),
     # 删除换行
     (re.compile(r'\\N'), ''),
-    # 顿号、改为半角空格
-    (re.compile(r'、'), ' '), (re.compile(r'､'), ' '),
     # 双引号改为单引号（取消）
     # (re.compile(r'『'), '「'), (re.compile(r'』'), '」'),
     # remove [...] 非贪婪模式，防止匹配[...]xxx[...]的形式
     (re.compile(r'\[.*?\]'), ''),
 ]
+# 替换符号
+assert len(conf.symbols.replace_key) == len(conf.symbols.replace_val), 'symbols.replace_key的个数与symbols.replace_val的个数不一致！'
+pats_rm.extend(
+    (re.compile(string), repl)
+    for string, repl in
+    zip(conf.symbols.replace_key, conf.symbols.replace_val)
+)
+
 pats_rmcomment: list[tuple[re.Pattern, str]] = [
     # remove (...) 非贪婪模式，防止匹配(...)xxx(...)的形式
     (re.compile(r'\(.*?\)'), ''),

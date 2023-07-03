@@ -16,7 +16,8 @@
 
 合并多行对白及其时间（需要保证字幕按时间顺序排列）
 
-📝 分隔符：合并的行之间用`merge.sep`分隔，默认为空格。
+📝 分隔符：一般使用`merge.sep`（默认为空格）或`merge.sep_on_overlap`（默认为空格）；
+当新行以`merge.special_prefix`开头时（默认为空字符串，表示关闭该功能），则改为使用`merge.sep_on_special_prefix`分隔。
 
 1. 按成对括号合并（开关：`merge.pair`，默认开启）：
    
@@ -30,7 +31,7 @@
 
 3. 按时间合并（开关：`merge.time`，默认关闭）：
 
-   时间有重叠的相邻对白合并，使用`merge.sep`分隔。
+   时间有重叠的相邻对白合并，使用`merge.sep_on_overlap`分隔。
 
 - 可配置参数：
 
@@ -40,17 +41,13 @@
   
     默认为2，设为0表示不限制。
 
-    若`remove_overlap`已开启，则表示不同含义（见下文）。
-
-  - 📝 保证输出无时间重叠`remove_overlap`：
-
-    默认关闭。开启后，输出的每一行都不会有时间重叠，对有时间重叠的对白每达到`merge.limit`行后用`merge.sep_on_overlap`（默认为空格）隔开。
-  
-    【相当于对原来“合并+清理的结果”再次进行时间合并，且达到`merge.limit`后使用`merge.sep_on_overlap`隔开】
+  - 📝 忽略按时间合并时的行数限制`merge.ignore_limit_on_overlap`：
+    
+    默认关闭。开启后可以保证输出的每一行都不会有时间重叠。
 
 ### 清理
 
-1. 直接删除以下**单个**字符（配置：`removed_symbols`，把所有需要删除的**单个**字符依次写入）：
+1. 直接删除以下**单个**字符（配置：`symbols.remove`，把所有需要删除的**单个**字符依次写入）：
 
    `…` `｡` `。` `！` `!` `？` `?` `~` `～` `∼` `・` `♪` `≫` `《` `》` `<` `>` `＜` `＞` `〈` `〉` 
 
@@ -61,9 +58,12 @@
    `\N`
 4. 方括号`[]`及其括起来的的内容（不可配置）；
 5. 圆括号`()`及其括起来的内容，一般为说话人或环境音提示（开关：`remove_comments`，默认开启）；
-6. 以下符号替换为半角空格（不可配置）：
+6. 替换**单个**字符（配置：`symbols.replace_key` `symbols.replace_val`）：
    
-    `、` `､`
+    默认`、` `､`替换为半角空格。
+
+    配置方法：替换前的**单个**字符写在`symbols.replace_key`中，替换后的**单个**字符**一一对应**按顺序依次写在`symbols.replace_val`中。
+
 7. rubi字幕（平假名注音字幕）（开关：`remove_rubi`，默认开启）
 8. 特效标签（花括号括起来的），开启时全部删除，关闭时保留（如果合并了多行，只保留第一行的）（开关：`remove_format_tags`，默认开启）
 
@@ -105,15 +105,21 @@
         "pair": true,
         "singlesuf": true,
         "time": false,
-        "sep": " ",
         "limit": 2,
-        "sep_on_overlap": " "
+        "ignore_limit_on_overlap": false,
+        "sep": " ",
+        "sep_on_overlap": " ",
+        "special_prefix": "",
+        "sep_on_special_prefix": "\\N"
     },
-    "removed_symbols": "…。｡！!？?~～∼・♪≫《》<>＜＞〈〉",
+    "symbols": {
+      "remove": "…。｡！!？?~～∼・♪≫《》<>＜＞〈〉",
+      "replace_key": "、､",
+      "replace_val": "  "
+    },
     "remove_rubi": true,
     "remove_format_tags": true,
     "remove_comments": true,
-    "remove_overlap": false,
     "convert_width": true,
     "add_newline_prefix": true,
     "format_digit": true
