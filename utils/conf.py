@@ -1,8 +1,19 @@
 from pathlib import Path
+from typing import Optional
+
 from addict import Dict
 
 import utils.jsonlib as json
-from utils.const import PATHS
+from utils.patterns import load_patterns_from_conf
+
+
+def update_from(base: dict, new: dict):
+    for key in base.keys():
+        if key in new:
+            if isinstance(base[key], dict) and isinstance(new[key], dict):
+                update_from(base[key], new[key])  # Recursively update nested dicts
+            else:
+                base[key] = new[key]  # Update values for non-dict keys
 
 
 def loadConfigs(path: Path) -> Dict:
@@ -47,10 +58,11 @@ def loadConfigs(path: Path) -> Dict:
     if path.is_file():
         with path.open('r', encoding='utf8') as f:
             read = Dict(json.load(f))
-        conf.update(read)
+        update_from(conf, read)
     else:
         path.touch()
     saveConfigs(path, conf)
+    load_patterns_from_conf(conf)
     return conf
 
 
@@ -59,7 +71,4 @@ def saveConfigs(path: Path, conf: Dict):
         json.dump(conf.to_dict(), f, indent=4, ensure_ascii=False)
 
 
-conf = loadConfigs(PATHS.CONF)
-
-if __name__ == '__main__':
-    print(conf)
+conf: Optional[Dict] = None

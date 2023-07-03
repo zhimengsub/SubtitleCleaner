@@ -2,7 +2,6 @@ import re
 
 from bidict import bidict
 
-from utils.conf import conf
 
 # 标志台词需要合并的符号对
 pairs = bidict({
@@ -27,8 +26,6 @@ pats_stripsuf: list[tuple[re.Pattern, str]] = [
     (re.compile(c + '$'), '') for c in singlesufs
 ]
 pats_rm: list[tuple[re.Pattern, str]] = [
-    # 删除符号
-    (re.compile('[' + conf.symbols.remove + ']'), ''),
     # 删除换行
     (re.compile(r'\\N'), ''),
     # 双引号改为单引号（取消）
@@ -36,14 +33,6 @@ pats_rm: list[tuple[re.Pattern, str]] = [
     # remove [...] 非贪婪模式，防止匹配[...]xxx[...]的形式
     (re.compile(r'\[.*?\]'), ''),
 ]
-# 替换符号
-assert len(conf.symbols.replace_key) == len(conf.symbols.replace_val), 'symbols.replace_key的个数与symbols.replace_val的个数不一致！'
-pats_rm.extend(
-    (re.compile(string), repl)
-    for string, repl in
-    zip(conf.symbols.replace_key, conf.symbols.replace_val)
-)
-
 pats_rmcomment: list[tuple[re.Pattern, str]] = [
     # remove (...) 非贪婪模式，防止匹配(...)xxx(...)的形式
     (re.compile(r'\(.*?\)'), ''),
@@ -52,6 +41,23 @@ pats_rmpairs: list[tuple[re.Pattern, str]] = [
     # remove [...] 非贪婪模式，防止匹配[...]xxx[...]的形式
     (re.compile(r'\[.*?\]'), ''),
 ]
+
+
+def load_patterns_from_conf(conf):
+    global pats_rm
+    # 删除符号
+    pats_rm.append(
+        (re.compile('[' + conf.symbols.remove + ']'), ''),
+    )
+    # 替换符号
+    assert len(conf.symbols.replace_key) == len(conf.symbols.replace_val),\
+        'symbols.replace_key的个数与symbols.replace_val的个数不一致！'
+    pats_rm.extend(
+        (re.compile(string), repl)
+        for string, repl in
+        zip(conf.symbols.replace_key, conf.symbols.replace_val)
+    )
+
 
 # 拟声词 v0.2
 mainpats = [

@@ -136,7 +136,7 @@
 
 格式
 ```
-SubCleaner.py [-h] [-o OUTFILE] [-q] [--offsetms OFFSETMS] [--log] InputFile
+SubCleaner.py [-h] [-o OUTFILE] [-q] [--offsetms OFFSETMS] [-c CONFIG] [--log] InputFile
 ```
 
 可选参数说明：
@@ -153,6 +153,10 @@ SubCleaner.py [-h] [-o OUTFILE] [-q] [--offsetms OFFSETMS] [--log] InputFile
 `--offsetms OFFSETMS` 
 
 输出ass整体时间偏移毫秒数，负数为提前，正数为延后。
+
+`-c, --config CONFIG`
+
+指定配置文件的路径，默认为同目录下的`config.json`
 
 `--log`
 

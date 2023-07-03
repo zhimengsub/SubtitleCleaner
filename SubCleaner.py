@@ -1,7 +1,7 @@
 import datetime
 import os
-from argparse import RawTextHelpFormatter
 import traceback
+from argparse import RawTextHelpFormatter
 from copy import deepcopy
 from typing import Optional
 
@@ -14,12 +14,12 @@ from utils.const import *
 from utils.logfile import _print, setLogfile, closeLogfile, print, warning, error
 from utils.misc import mkFilepath, remove_tags, overlaps, save, formatDelta, joinEvents, splitEvents
 from utils.mergetype import MergeType
-from utils.conf import conf
+from utils.conf import loadConfigs, conf
 from utils.mydialogue import MyDialogue
 from utils.patterns import pairs, singlesufs, pats_stripsuf, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
     pats_final
 
-VER = 'v3.0.5'
+VER = 'v3.0.6'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -30,11 +30,12 @@ DESCRIPTION = '字幕清理器\n' + \
 
 def initparser():
     parser = MyParser(description=DESCRIPTION, formatter_class=RawTextHelpFormatter)
-    parser.add_argument('InputFile', type=str, help='待转换ass文件的路径。')
+    parser.add_argument('InputFile', type=str, help='待转换ass文件的路径。', default='', nargs='?')
     parser.add_argument('-o', '--output', type=str, help='输出文件路径，默认为<输入文件名>_cleaned。')
     parser.add_argument('-q', '--quit', action='store_true', help='结束后不暂停程序直接退出，方便命令行调用。不加该参数程序结束时会暂停。')
     parser.add_argument('--offsetms', type=int, default=0, help='输出ass整体时间偏移毫秒数，负数为提前，正数为延后。')
     parser.add_argument('--log', action='store_true', help='记录日志，日志存储到同目录下的<输入文件名>_log.txt。')
+    parser.add_argument('--config', '-c', type=str, help='配置文件路径，默认为当前目录下的config.json。')
     return parser
 
 
@@ -357,11 +358,18 @@ def processDoc(doc: ass.Document,
     return doc
 
 
-def main():
+if __name__ == '__main__':
+    global conf
     parser = initparser()
     args = parser.parse_args()
     offsetms = datetime.timedelta(milliseconds=args.offsetms)
     try:
+        assert args.config is None or Path(args.config).is_file(), '传入的配置文件不存在：' + str(Path(args.config).absolute())
+        args.config = Path(args.config) if args.config else PATHS.CONF
+        conf = loadConfigs(args.config)
+
+        assert Path(args.InputFile).is_file(), '输入文件不存在：' + str(Path(args.InputFile).absolute())
+
         if args.log:
             logpath = mkFilepath(args.InputFile, '.txt', '_log')
             setLogfile(logpath)
@@ -382,7 +390,8 @@ def main():
         save(conf.format, doc, outpath)
         print('\n已保存至', outpath)
         print()
-
+    except AssertionError as err:
+        error(err)
     except Exception as err:
         error(
             '\n请将下面的报错信息及待转换文件提交到 https://github.com/zhimengsub/SubtitleCleaner/issues')
@@ -395,8 +404,4 @@ def main():
 
         if not args.quit:
             os.system('pause')
-
-
-if __name__ == '__main__':
-    main()
 
