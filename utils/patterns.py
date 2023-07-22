@@ -46,17 +46,19 @@ pats_rmpairs: list[tuple[re.Pattern, str]] = [
 def load_patterns_from_conf(conf):
     global pats_rm
     # 删除符号
-    pats_rm.append(
-        (re.compile('[' + conf.symbols.remove + ']'), ''),
-    )
+    if conf.symbols.remove != '':
+        pats_rm.append(
+            (re.compile('[' + conf.symbols.remove + ']'), ''),
+        )
     # 替换符号
-    assert len(conf.symbols.replace_key) == len(conf.symbols.replace_val),\
-        'symbols.replace_key的个数与symbols.replace_val的个数不一致！'
-    pats_rm.extend(
-        (re.compile(string), repl)
-        for string, repl in
-        zip(conf.symbols.replace_key, conf.symbols.replace_val)
-    )
+    if conf.symbols.replace_key != '' and conf.symbols.replace_val != '':
+        assert len(conf.symbols.replace_key) == len(conf.symbols.replace_val),\
+            'symbols.replace_key的个数与symbols.replace_val的个数不一致！'
+        pats_rm.extend(
+            (re.compile(string), repl)
+            for string, repl in
+            zip(conf.symbols.replace_key, conf.symbols.replace_val)
+        )
 
 
 # 拟声词 v0.2

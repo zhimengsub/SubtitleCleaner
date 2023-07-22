@@ -19,7 +19,7 @@ from utils.mydialogue import MyDialogue
 from utils.patterns import pairs, singlesufs, pats_stripsuf, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
     pats_final
 
-VER = 'v3.0.6'
+VER = 'v3.0.7'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \

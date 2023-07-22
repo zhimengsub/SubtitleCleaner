@@ -1,0 +1,25 @@
+{
+    "format": "ass",
+    "merge": {
+        "pair": true,
+        "singlesuf": true,
+        "time": true,
+        "limit": 2,
+        "ignore_limit_on_overlap": true,
+        "sep": " ",
+        "sep_on_overlap": "",
+        "special_prefix": "≫",
+        "sep_on_special_prefix": "\\N"
+    },
+    "symbols": {
+        "remove": "。｡",
+        "replace_key": "",
+        "replace_val": ""
+    },
+    "remove_rubi": true,
+    "remove_format_tags": false,
+    "remove_comments": false,
+    "convert_width": true,
+    "add_newline_prefix": false,
+    "format_digit": false
+}
