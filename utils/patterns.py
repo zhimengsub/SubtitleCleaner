@@ -13,11 +13,13 @@ pairs = bidict({
     '｢': '｣',
     '『':'』',
     '(':')',
+    '（':'）',
     '[':']',
 })
 # 标志以该符号结尾时与下一句台词合并
 singlesufs = [
-    '→'
+    '→',
+    '➡'
 ]
 
 # 清理相关
@@ -36,6 +38,7 @@ pats_rm: list[tuple[re.Pattern, str]] = [
 pats_rmcomment: list[tuple[re.Pattern, str]] = [
     # remove (...) 非贪婪模式，防止匹配(...)xxx(...)的形式
     (re.compile(r'\(.*?\)'), ''),
+    (re.compile(r'（.*?）'), ''),
 ]
 pats_rmpairs: list[tuple[re.Pattern, str]] = [
     # remove [...] 非贪婪模式，防止匹配[...]xxx[...]的形式

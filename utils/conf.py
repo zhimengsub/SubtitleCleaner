@@ -38,7 +38,7 @@ def loadConfigs(path: Path) -> Dict:
             sep_on_special_prefix=r'\N',
         ),
         symbols=Dict(
-            remove='…。｡！!？?~～∼・♪≫《》<>＜＞〈〉',
+            remove='。｡！!？?~～∼・♪≫《》<>＜＞〈〉',
             replace_key='、､',
             replace_val='  ',
         ),
