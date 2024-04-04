@@ -39,8 +39,8 @@ def loadConfigs(path: Path) -> Dict:
         ),
         symbols=Dict(
             remove='。｡！!？?~～∼・♪≫《》<>＜＞〈〉',
-            replace_key='、､',
-            replace_val='  ',
+            replace_key='、､⚟',
+            replace_val='   ',
         ),
         # remove 注音假名
         remove_rubi=True,
@@ -48,11 +48,15 @@ def loadConfigs(path: Path) -> Dict:
         remove_format_tags=True,
         # remove_comments: remove (...) format
         remove_comments=True,
+        # remove speaker name, 规则为从行首开始全是片假名，跟一个冒号。如果说话人在句中则处理不了 see pats_final
+        remove_speaker=True,
         convert_width=True,
         # add '\N' at each line's start
         add_newline_prefix=True,
         # if line contain 1 digit, to full-width, otherwise all digits to half-with
         format_digit=True,
+        # 在Actor栏标注时间重叠的条目
+        mark_overlap=True,
     )
 
     if path.is_file():

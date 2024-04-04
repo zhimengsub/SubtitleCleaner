@@ -17,9 +17,9 @@ from utils.mergetype import MergeType
 from utils.conf import loadConfigs, conf
 from utils.mydialogue import MyDialogue
 from utils.patterns import pairs, singlesufs, pats_stripsuf, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
-    pats_final
+    pats_final, pats_speaker
 
-VER = 'v3.0.8'
+VER = 'v3.0.9'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -289,6 +289,7 @@ def processDoc(doc: ass.Document,
             # don't merge rubi
             end, merged_events = i, [doc.events[i]]
         else:
+            # merged_events包含了从第i个开始所有要合并的event
             end, merged_events = mergeEvents(
                 doc.events,
                 i,
@@ -304,25 +305,31 @@ def processDoc(doc: ass.Document,
         print(f'{procid}.', ' '.join(log_reason))
 
         # 这里得到的是已经合并了的event，只不过根据limit又进行了分隔
-        for merged in merged_events:
+        for event in merged_events:
             # convert half-width katakana and symbols
             if conf.convert_width:
-                converted = convertline(merged.text, lookup)
-                if converted != merged.text:
-                    merged.text = converted
+                converted = convertline(event.text, lookup)
+                if converted != event.text:
+                    event.text = converted
                     reason = '[转换假名]'
                     print(reason)
                     cnter_cv += 1
 
             # post process
-            if conf.add_newline_prefix:
-                cleanEvent(merged, pats_prefix)
-            cleanEvent(merged, pats_final)
+            # 删除说话人
+            if conf.remove_speaker:
+                cleanEvent(event, pats_speaker)
+            # 处理数字
             if conf.format_digit:
-                format_digit(merged)
+                format_digit(event)
+            # 添加\N
+            if conf.add_newline_prefix:
+                cleanEvent(event, pats_prefix)
 
-            merged.start += offsetms
-            merged.end += offsetms
+            cleanEvent(event, pats_final)
+
+            event.start += offsetms
+            event.end += offsetms
 
         tmp = []
         for ind in range(i, end + 1):
@@ -333,21 +340,35 @@ def processDoc(doc: ass.Document,
         print(' +\n'.join([time_start + ' ' + time_end + ' ' + text for time_start, time_end, text in tmp]))
         print('->')
 
-        for merged in merged_events:
-            if merged.text:
+        for event in merged_events:
+            if event.text and event.text != '\\N':
                 outid += 1
-                time_start = formatDelta(merged.start)
-                time_end = formatDelta(merged.end)
-                text = merged.text
+                time_start = formatDelta(event.start)
+                time_end = formatDelta(event.end)
+                text = event.text
                 print(f'[{outid}]', time_start, time_end, text)
-                events_out.append(merged)
+                events_out.append(event)
             else:
                 print('<删除>')
 
         print()
         i = end + 1
 
-    print('处理完成！共合并了', cnter_mg, '行文本，清理了', cnter_ono, '行对白的语气词，转换了', cnter_cv, '行对白的假名，最终生成了', outid, '行对白。')
+    # 在"actor"栏标注时间重叠情况
+    overlap_id = 0
+    if conf.mark_overlap:
+        i = 0
+        while i < len(events_out) - 1:
+            overlap_end = i
+            while overlaps(events_out[overlap_end], events_out[overlap_end+1]):
+                overlap_end += 1
+            if overlap_end != i:
+                overlap_id += 1
+                for j in range(i, overlap_end+1):
+                    events_out[j].name += '重叠' + str(overlap_id)
+            i = overlap_end + 1
+
+    print('处理完成！共合并了', cnter_mg, '行文本，清理了', cnter_ono, '行对白的语气词，转换了', cnter_cv, '行对白的假名，存在', overlap_id, '处时间重叠，最终生成了', outid, '行对白。')
 
     if warnings:
         print('\n存在WARNING，请根据下方信息向上查找对应记录')
@@ -364,9 +385,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     offsetms = datetime.timedelta(milliseconds=args.offsetms)
     try:
+        print(DESCRIPTION)
+        print()
         assert args.config is None or Path(args.config).is_file(), '传入的配置文件不存在：' + str(Path(args.config).absolute())
         args.config = Path(args.config) if args.config else PATHS.CONF
         conf = loadConfigs(args.config)
+        print('已更新配置文件到', args.config)
+        print()
 
         assert Path(args.InputFile).is_file(), '输入文件不存在：' + str(Path(args.InputFile).absolute())
 
@@ -374,8 +399,6 @@ if __name__ == '__main__':
             logpath = mkFilepath(args.InputFile, '.txt', '_log')
             setLogfile(logpath)
 
-        print(DESCRIPTION)
-        print()
         print('正在读取', args.InputFile)
 
         with open(args.InputFile, encoding='utf-8-sig') as f:

@@ -88,9 +88,15 @@ pats_prefix: list[tuple[re.Pattern, str]] = [
     (re.compile(r'(^|\n)'), r'\1\\N'),
 ]
 
+pats_speaker: list[tuple[re.Pattern, str]] = [
+    # 删除说话人 规则为从行首开始全是片假名，跟一个冒号。如果说话人在句中则处理不了
+    (re.compile(r'^[\u30A0-\u30FF]+：'), '')
+]
+
 # 对合并后的每一行进行处理
 pats_final: list[tuple[re.Pattern, str]] = [
     # 多个半角空格缩至一个
     (re.compile(r' +'), ' '),
-
+    # 删除符号后的空格
+    (re.compile(r'… +'), '…')
 ]
