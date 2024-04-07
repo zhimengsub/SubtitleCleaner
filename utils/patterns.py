@@ -3,30 +3,13 @@ import re
 from bidict import bidict
 
 
-# 标志台词需要合并的符号对
-pairs = bidict({
-    '《': '》',
-    '<': '>',
-    '＜': '＞',
-    '〈': '〉',
-    '「': '」',
-    '｢': '｣',
-    '『':'』',
-    '(':')',
-    '（':'）',
-    '[':']',
-})
-# 标志以该符号结尾时与下一句台词合并
-singlesufs = [
-    '→',
-    '➡'
-]
+# 标志台词需要合并的符号对，如{'《': '》'}
+pairs: bidict[str, str] = bidict()
+
+# 标志以该符号结尾时与下一句台词合并，如 ['→', '➡']
+singlesufs: list[str] = []
 
 # 清理相关
-pats_stripsuf: list[tuple[re.Pattern, str]] = [
-    # 删除结尾单符号合并标志
-    (re.compile(c + '$'), '') for c in singlesufs
-]
 pats_rm: list[tuple[re.Pattern, str]] = [
     # 删除换行
     (re.compile(r'\\N'), ''),
@@ -47,7 +30,7 @@ pats_rmpairs: list[tuple[re.Pattern, str]] = [
 
 
 def load_patterns_from_conf(conf):
-    global pats_rm
+    global pats_rm, pairs, singlesufs
     # 删除符号
     if conf.symbols.remove != '':
         pats_rm.append(
@@ -62,7 +45,18 @@ def load_patterns_from_conf(conf):
             for string, repl in
             zip(conf.symbols.replace_key, conf.symbols.replace_val)
         )
-
+    # 标志合并的符号对
+    if conf.merge.merge_pairs_left != '' and conf.merge.merge_pairs_right != '':
+        assert len(conf.merge.merge_pairs_left) == len(conf.merge.merge_pairs_right), \
+            'symbols.merge_pairs_left的个数与symbols.merge_pairs_right的个数不一致！'
+        pairs.putall(zip(conf.merge.merge_pairs_left, conf.merge.merge_pairs_right))
+    # 标志合并的后缀符号
+    if conf.merge.merge_suffix != '':
+        singlesufs.extend(list(str(conf.merge.merge_suffix)))
+        # 删除结尾单符号合并标志
+        pats_rm.extend(
+            (re.compile(c + '$'), '') for c in singlesufs
+        )
 
 # 拟声词 v0.2
 mainpats = [

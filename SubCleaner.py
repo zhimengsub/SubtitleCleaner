@@ -16,10 +16,10 @@ from utils.misc import mkFilepath, remove_tags, overlaps, save, formatDelta, joi
 from utils.mergetype import MergeType
 from utils.conf import loadConfigs, conf
 from utils.mydialogue import MyDialogue
-from utils.patterns import pairs, singlesufs, pats_stripsuf, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
+from utils.patterns import pairs, singlesufs, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
     pats_final, pats_speaker
 
-VER = 'v3.0.9'
+VER = 'v3.1.0'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -184,8 +184,6 @@ def mergeEvents(
         start_ = end
 
     for event in merge_list:
-        # 清理合并标志符号
-        cleanEvent(event, pats_stripsuf)
         # 清理各种符号
         cleanEvent(event, pats_rm)
 

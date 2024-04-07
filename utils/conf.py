@@ -36,6 +36,11 @@ def loadConfigs(path: Path) -> Dict:
             # if overlapped line has the above prefix, then use another sep
             # (usually a break line for a different speaker)
             sep_on_special_prefix=r'\N',
+            # 标志合并的符号对
+            merge_pairs_left='《<＜〈「｢『(（[［',
+            merge_pairs_right='》>＞〉」｣』)）]］',
+            # 标志合并的后缀符号
+            merge_suffix='→➡',
         ),
         symbols=Dict(
             remove='。｡！!？?~～∼・♪≫《》<>＜＞〈〉',
@@ -48,7 +53,7 @@ def loadConfigs(path: Path) -> Dict:
         remove_format_tags=True,
         # remove_comments: remove (...) format
         remove_comments=True,
-        # remove speaker name, 规则为从行首开始全是片假名，跟一个冒号。如果说话人在句中则处理不了 see pats_final
+        # remove speaker name, 规则为从行首开始全是片假名，跟一个冒号。如果说话人在句中则处理不了 see pats_speaker
         remove_speaker=True,
         convert_width=True,
         # add '\N' at each line's start

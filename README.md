@@ -16,18 +16,29 @@
 
 合并多行对白及其时间（需要保证字幕按时间顺序排列）
 
-📝 分隔符：一般使用`merge.sep`（默认为空格）或`merge.sep_on_overlap`（默认为空格）；
+📝 分隔符：一般使用`merge.sep`（默认为空格）或`merge.sep_on_overlap`（默认为空格），具体用法见下文；
+
 当新行以`merge.special_prefix`开头时（默认为空字符串，表示关闭该功能），则改为使用`merge.sep_on_special_prefix`分隔。
 
-1. 按成对括号合并（开关：`merge.pair`，默认开启）：
+1. 按成对括号合并（开关：`merge.pair`，默认开启）
    
-   包含以下符号的左括号，经过多行后出现对应的右括号，则将这些行合并，使用`merge.sep`分隔。⚠️合并时左括号后和右括号前后不添加分隔符。
-    
-    `《》` `<>` `＜＞` `〈〉` `「」` `｢｣` `『』` `()` `[]`
+   从首次出现左括号起，经过若干行后出现对应的右括号，则将这些行合并，并使用`merge.sep`分隔。（如需删除括号本身，见[清理](#清理)）
 
-2. 按单个符号合并（开关：`merge.singlesuf`，默认开启）：
+   如：第一行`《aa`，第二行`bb》`，两行合并为一行得到`《aa bb》`。
    
-    以`→`结尾的对白，和下一行合并，使用`merge.sep`分隔。
+   ⚠️合并时左括号后和右括号前后不添加分隔符。
+
+   配置：在`merge.merge_pairs_left`中配置左括号，在`merge.merge_pairs_right`中配置对应的右括号，二者必须按顺序一一对应。
+
+   默认取值为
+    
+   `merge.merge_pairs_left: "《<＜〈「｢『(（[［"`
+
+   `merge.merge_pairs_right: "》>＞〉」｣』)）]］"`
+
+2. 按单个符号合并（开关：`merge.singlesuf`，默认开启）
+   
+    以`merge.merge_suffix`(默认为`→➡`)中任一符号**结尾**的对白，和下一行合并，并使用`merge.sep`分隔，并将该符号删除。
 
 3. 按时间合并（开关：`merge.time`，默认关闭）：
 
@@ -47,25 +58,26 @@
 
 ### 清理
 
-1. 直接删除以下**单个**字符（配置：`symbols.remove`，把所有需要删除的**单个**字符依次写入）：
-
-   `…` `｡` `。` `！` `!` `？` `?` `~` `～` `∼` `・` `♪` `≫` `《` `》` `<` `>` `＜` `＞` `〈` `〉` 
-
-    🗈：如果添加`「` `」` `『` `』`等各种括号也不影响前面的合并。
-2. 如果以下字符在行尾（合并前），则将其删除（不可配置）：
-   `→`
-3. 直接删除以下字符（不可配置）：
-   `\N`
-4. 方括号`[]`及其括起来的的内容（不可配置）；
-5. 圆括号`()`及其括起来的内容，一般为说话人或环境音提示（开关：`remove_comments`，默认开启）；
-6. 替换**单个**字符（配置：`symbols.replace_key` `symbols.replace_val`）：
+1. 直接删除**单个**字符：
    
-    默认`、` `､`替换为半角空格。
+   配置：`symbols.remove`，把所有需要删除的**单个**字符依次写入，默认包括：
+
+   `。｡！!？?~～∼・♪≫《》<>＜＞〈〉`
+
+    📝：如果添加`「` `」` `『` `』`等各种括号也不影响前面的合并，会先合并再删除。
+2. 替换**单个**字符（配置：`symbols.replace_key` `symbols.replace_val`）：
+   
+    默认`symbols.replace_key: "、､⚟"`，依次替换为`symbols.replace_val: "   "`（全替换为半角空格）。
 
     配置方法：替换前的**单个**字符写在`symbols.replace_key`中，替换后的**单个**字符**一一对应**按顺序依次写在`symbols.replace_val`中。
+3. 直接删除以下字符（不可配置）：`\N`
+4. 半角方括号`[]`及其括起来的的内容（不可配置）；
+5. rubi字幕（平假名注音字幕）（开关：`remove_rubi`，默认开启）
+6. 特效标签（花括号括起来的），开启时全部删除，关闭时保留（如果合并了多行，只保留第一行的）（开关：`remove_format_tags`，默认开启）
+7. 半角圆括号`()`及其括起来的内容，一般为说话人或环境音提示（开关：`remove_comments`，默认开启）；
+8. 说话人标识。匹配规则为：从行首开始全是片假名，然后紧接一个全角冒号（开关：`remove_speaker`，默认开启）。
 
-7. rubi字幕（平假名注音字幕）（开关：`remove_rubi`，默认开启）
-8. 特效标签（花括号括起来的），开启时全部删除，关闭时保留（如果合并了多行，只保留第一行的）（开关：`remove_format_tags`，默认开启）
+
 
 ### 其他
 
@@ -110,19 +122,24 @@
         "sep": " ",
         "sep_on_overlap": " ",
         "special_prefix": "",
-        "sep_on_special_prefix": "\\N"
+        "sep_on_special_prefix": "\\N",
+        "merge_pairs_left": "《<＜〈「｢『(（[［",
+        "merge_pairs_right": "》>＞〉」｣』)）]］",
+        "merge_suffix": "→➡"
     },
     "symbols": {
-      "remove": "…。｡！!？?~～∼・♪≫《》<>＜＞〈〉",
-      "replace_key": "、､",
-      "replace_val": "  "
+        "remove": "。｡！!？?~～∼・♪≫《》<>＜＞〈〉",
+        "replace_key": "、､⚟",
+        "replace_val": "   "
     },
     "remove_rubi": true,
     "remove_format_tags": true,
     "remove_comments": true,
+    "remove_speaker": true,
     "convert_width": true,
     "add_newline_prefix": true,
-    "format_digit": true
+    "format_digit": true,
+    "mark_overlap": true
 }
 ```
 
