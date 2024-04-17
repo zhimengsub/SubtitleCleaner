@@ -97,7 +97,11 @@
 
 4. 标注时间重叠行（开关：`mark_overlap`，默认开启）：
 
-    当某几行的时间出现重叠时，在`Actor`栏中标注。
+    当某几行的时间出现重叠时，在`Actor`栏中标注（如：时间重叠1）。
+
+5. 标注分工（设置值：`mark_segment`，默认为3，设为0表示关闭）：
+
+    把全文均分为`mark_segment`部分，每部分的起始位置标注在`Actor`栏中（如：分段1开始），方便分工。
 
 - 可配置参数：
     
@@ -143,7 +147,8 @@
     "convert_width": true,
     "add_newline_prefix": true,
     "format_digit": true,
-    "mark_overlap": true
+    "mark_overlap": true,
+    "mark_segment": 3
 }
 ```
 

@@ -19,7 +19,7 @@ from utils.mydialogue import MyDialogue
 from utils.patterns import pairs, singlesufs, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
     pats_final, pats_speaker
 
-VER = 'v3.1.0'
+VER = 'v3.1.1'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -352,6 +352,14 @@ def processDoc(doc: ass.Document,
         print()
         i = end + 1
 
+    # 在"actor"栏标注分段/分工
+    if conf.mark_segment >= 1:
+        segment_num = 1
+        for i in range(0, len(events_out), len(events_out)//conf.mark_segment):
+            if events_out[i].name != '': events_out[i].name += ';'
+            events_out[i].name += '分段' + str(segment_num) + '开始'
+            segment_num += 1
+
     # 在"actor"栏标注时间重叠情况
     overlap_id = 0
     if conf.mark_overlap:
@@ -363,7 +371,8 @@ def processDoc(doc: ass.Document,
             if overlap_end != i:
                 overlap_id += 1
                 for j in range(i, overlap_end+1):
-                    events_out[j].name += '重叠' + str(overlap_id)
+                    if events_out[j].name != '': events_out[j].name += ';'
+                    events_out[j].name += '时间重叠' + str(overlap_id)
             i = overlap_end + 1
 
     print('处理完成！共合并了', cnter_mg, '行文本，清理了', cnter_ono, '行对白的语气词，转换了', cnter_cv, '行对白的假名，存在', overlap_id, '处时间重叠，最终生成了', outid, '行对白。')

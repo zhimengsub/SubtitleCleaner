@@ -62,6 +62,8 @@ def loadConfigs(path: Path) -> Dict:
         format_digit=True,
         # 在Actor栏标注时间重叠的条目
         mark_overlap=True,
+        # 均分为多个部分，每段的开始标注在Actor栏，方便分工（置0表示关闭功能）
+        mark_segment=3,
     )
 
     if path.is_file():
