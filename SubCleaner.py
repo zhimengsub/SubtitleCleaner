@@ -19,7 +19,7 @@ from utils.mydialogue import MyDialogue
 from utils.patterns import pairs, singlesufs, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
     pats_final, pats_speaker
 
-VER = 'v3.1.1'
+VER = 'v3.1.2'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -353,7 +353,7 @@ def processDoc(doc: ass.Document,
         i = end + 1
 
     # 在"actor"栏标注分段/分工
-    if conf.mark_segment >= 1:
+    if 1 <= conf.mark_segment <= len(events_out):
         segment_num = 1
         for i in range(0, len(events_out), len(events_out)//conf.mark_segment):
             if events_out[i].name != '': events_out[i].name += ';'
@@ -366,7 +366,7 @@ def processDoc(doc: ass.Document,
         i = 0
         while i < len(events_out) - 1:
             overlap_end = i
-            while overlaps(events_out[overlap_end], events_out[overlap_end+1]):
+            while overlap_end < len(events_out) - 1 and overlaps(events_out[overlap_end], events_out[overlap_end+1]):
                 overlap_end += 1
             if overlap_end != i:
                 overlap_id += 1
