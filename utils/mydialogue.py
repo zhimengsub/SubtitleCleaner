@@ -15,7 +15,7 @@ class MyDialogue(Dialogue):
 
     @property
     def plain_text(self):
-        return removed_tags(self.text)
+        return removed_tags(removed_color(self.text))
 
 
 def removed_color(text: str) -> str:
