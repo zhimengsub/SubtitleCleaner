@@ -17,9 +17,9 @@ from utils.mergetype import MergeType
 from utils.conf import loadConfigs, conf
 from utils.mydialogue import MyDialogue
 from utils.patterns import pairs, singlesufs, pats_rm, pats_rmcomment, pats_rmpairs, pats_prefix, \
-    pats_final, pats_speaker
+    pats_final, pats_speaker, texts_replace
 
-VER = 'v3.1.3.001'
+VER = 'v3.1.4'
 
 DESCRIPTION = '字幕清理器\n' + \
               '对ts源中提取出的ass字幕进行处理，包括合并多行对白、清理各种不必要的符号、说话人备注、转换假名半角等，输出ass或txt\n' + \
@@ -320,6 +320,13 @@ def processDoc(doc: ass.Document,
             # 处理数字
             if conf.format_digit:
                 format_digit(event)
+            # 替换文本
+            converted = event.text
+            for key, val in texts_replace.items():
+                converted = converted.replace(key, val)
+            if converted != event.text:
+                event.text = converted
+                print('[替换文本]')
             # 添加\N
             if conf.add_newline_prefix:
                 cleanEvent(event, pats_prefix)

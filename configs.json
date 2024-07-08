@@ -3,23 +3,40 @@
     "merge": {
         "pair": true,
         "singlesuf": true,
-        "time": true,
+        "time": false,
         "limit": 2,
-        "ignore_limit_on_overlap": true,
+        "ignore_limit_on_overlap": false,
         "sep": " ",
-        "sep_on_overlap": "",
-        "special_prefix": "≫",
-        "sep_on_special_prefix": "\\N"
+        "sep_on_overlap": " ",
+        "special_prefix": "",
+        "sep_on_special_prefix": "\\N",
+        "merge_pairs_left": "《<＜〈「｢『(（[［",
+        "merge_pairs_right": "》>＞〉」｣』)）]］",
+        "merge_suffix": "→➡"
     },
     "symbols": {
-        "remove": "。｡",
-        "replace_key": "",
-        "replace_val": ""
+        "remove": "。｡！!？?~～∼・♪≫《》<>＜＞〈〉",
+        "replace_key": "、､⚟",
+        "replace_val": "   "
+    },
+    "texts": {
+        "replace": {
+            "ウソ": "嘘",
+            "イヤ": "嫌",
+            "ダメ": "だめ",
+            "ヤツ": "奴",
+            "ジャマ": "邪魔",
+            "ケンカ": "喧嘩",
+            "ホント": "本当"
+        }
     },
     "remove_rubi": true,
-    "remove_format_tags": false,
-    "remove_comments": false,
+    "remove_format_tags": true,
+    "remove_comments": true,
+    "remove_speaker": true,
     "convert_width": true,
-    "add_newline_prefix": false,
-    "format_digit": false
+    "add_newline_prefix": true,
+    "format_digit": true,
+    "mark_overlap": true,
+    "mark_segment": 3
 }

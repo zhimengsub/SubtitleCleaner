@@ -47,6 +47,18 @@ def loadConfigs(path: Path) -> Dict:
             replace_key='、､⚟',
             replace_val='   ',
         ),
+        texts=Dict(
+            replace=Dict({
+                # replace key with val
+                'ウソ': '嘘',
+                'イヤ': '嫌',
+                'ダメ': 'だめ',
+                'ヤツ': '奴',
+                'ジャマ': '邪魔',
+                'ケンカ': '喧嘩',
+                'ホント': '本当',
+            }),
+        ),
         # remove 注音假名
         remove_rubi=True,
         # remove format tags that are enclosed in '{}'

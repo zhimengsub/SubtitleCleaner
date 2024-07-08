@@ -9,6 +9,9 @@ pairs: bidict[str, str] = bidict()
 # 标志以该符号结尾时与下一句台词合并，如 ['→', '➡']
 singlesufs: list[str] = []
 
+# 文本替换字典
+texts_replace: dict[str, str] = {}
+
 # 清理相关
 pats_rm: list[tuple[re.Pattern, str]] = [
     # 删除换行
@@ -30,7 +33,7 @@ pats_rmpairs: list[tuple[re.Pattern, str]] = [
 
 
 def load_patterns_from_conf(conf):
-    global pats_rm, pairs, singlesufs
+    global pats_rm, pairs, singlesufs, texts_replace
     # 删除符号
     if conf.symbols.remove != '':
         pats_rm.append(
@@ -45,6 +48,13 @@ def load_patterns_from_conf(conf):
             for string, repl in
             zip(conf.symbols.replace_key, conf.symbols.replace_val)
         )
+    # 替换文本
+    if conf.texts:
+        for key, val in conf.texts.replace.items():
+            key = key.strip()
+            val = val.strip()
+            texts_replace[key] = val
+
     # 标志合并的符号对
     if conf.merge.merge_pairs_left != '' and conf.merge.merge_pairs_right != '':
         assert len(conf.merge.merge_pairs_left) == len(conf.merge.merge_pairs_right), \
